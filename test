@@ -1,0 +1,6 @@
+#!/bin/bash
+set -eufo pipefail
+here="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+time racket "$here/test-ho.rkt"
+time racket "$here/test-fo.rkt"
