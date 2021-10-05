@@ -108,6 +108,11 @@
   (run* (q) (== 5 q))
   '((5)))
 
+(test 'diseq-1
+   (run* (q) (=/= 5 q))
+   '(((_.0) (=/= ((_.0 5))))))
+
+
 (test 'appendo-1
   (run* (xs ys) (appendo xs ys '(a b c d)))
   '((()        (a b c d))
@@ -185,7 +190,7 @@
                                      (list (quote quote) (var ()))))))))))
 
 (displayln "\nThe next test may take many seconds...")
-(test 'evalo-thrine
+#|(test 'evalo-thrine
   (run 1 (p q r) (evalo p q) (evalo q r) (evalo r p))
   '(((quote (quote (app (lambda (list (quote quote)
                                       (list (quote quote)
@@ -542,3 +547,4 @@
     ((1 0 1) (0 1) (1 1 0 1 0 1))
     ((0 1 1) (0 1) (0 0 0 0 0 1))
     ((1 1 1) (0 1) (1 1 0 0 1))))
+|#

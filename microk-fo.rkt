@@ -5,6 +5,7 @@
   (struct-out conj)
   (struct-out relate)
   (struct-out ==)
+  (struct-out =/=)
   (struct-out mplus)
   (struct-out bind)
   (struct-out pause)
@@ -19,6 +20,7 @@
 (struct conj   (g1 g2)                  #:prefab)
 (struct relate (thunk description)      #:prefab)
 (struct ==     (t1 t2)                  #:prefab)
+(struct =/=    (t1 t2)                  #:prefab)
 (struct bind   (bind-s bind-g)          #:prefab)
 (struct mplus  (mplus-s1 mplus-s2)      #:prefab)
 (struct pause  (pause-state pause-goal) #:prefab)
@@ -36,7 +38,8 @@
      (step (bind (pause st g1) g2)))
     ((relate thunk _)
      (pause st (thunk)))
-    ((== t1 t2) (unify t1 t2 st))))
+    ((== t1 t2) (unify t1 t2 st))
+    ((=/= t1 t2) (disunify t1 t2 st))))
 
 (define (step s)
   (match s

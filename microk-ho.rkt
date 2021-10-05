@@ -5,6 +5,7 @@
   conj
   relate
   ==
+  =/=
   mplus
   bind
   pause
@@ -37,6 +38,7 @@
 (define (relate thunk _)
   (lambda (st) (pause st (thunk))))
 (define (== t1 t2) (lambda (st) (unify t1 t2 st)))
+(define (=/= t1 t2) (lambda (st) (disunify t1 t2 st)))
 
 
 
