@@ -3,6 +3,7 @@
   (all-from-out "common.rkt")
   (all-from-out "microk-fo.rkt")
   ==
+  =/=
 
   define-relation
   fresh
