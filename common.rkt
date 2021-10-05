@@ -32,8 +32,18 @@
                        (occurs? x (walk (cdr t) sub) sub)))
         ((var? t)  (var=? x t))
         (else      #f)))
+
+(define (implies-one? sub v u)
+  (let ((u (walk u sub)) (v (walk v sub))) (eqv? u v)))
+
+(define (implies? sub =/=s)
+  (andmap (lambda (x) (implies-one? sub (car x) (cdr x))) =/=s))
+
+(define (contradicts? sub diseq)
+  (ormap (lambda (x) (implies? sub x)) diseq))
+
 (define (extend-sub x t sub diseq)
-  (and (not (occurs? x t sub)) `((,x . ,t) . ,sub)))
+  (and (not (contradicts? `((,x . ,t) . ,sub) diseq)) (not (occurs? x t sub)) `((,x . ,t) . ,sub)))
 
 (define empty-diseq '())
 
@@ -57,29 +67,10 @@
   (let ((sub (unify/sub u v (state-sub st) (state-diseq st))))
     (and sub (cons (state sub (state-diseq st)) #f))))
 
-;; Disunification
-#;(define (disunify/sub u v sub diseq)
-  (let ((u (walk u sub)) (v (walk v sub)))
-    (cond
-     ((and (var? u) (var? v) (var=? u v)) #f)
-     ((var? u)                            (if (occurs? u v sub) diseq (extend-diseq (list (cons u v)) diseq)))
-     ((var? v)                            (if (occurs? v u sub) diseq (extend-diseq (list (cons u v)) diseq)))
-     ((and (pair? u) (pair? v))           (let* ((diseq1 (disunify/sub (car u) (car v) sub '()))
-                                                 (diseq2 (disunify/sub (cdr u) (cdr v) sub '())))
-                                             (match (list diseq1 diseq2)
-                                               ((list '() _) diseq)
-                                               ((list _ '()) diseq)
-                                               ((list #f #f) #f)
-                                               ((list diseq1 #f) (extend-diseq (car diseq1) diseq))
-                                               ((list #f diseq2) (extend-diseq (car diseq2) diseq))
-                                               ((list diseq1 diseq2) (extend-diseq (append (car diseq1) (car diseq2)) diseq)))))
-     ((eqv? u v)                          #f)
-     (else                                diseq))))
-
 (define (disunify/sub u v st)
   (let* ((sub (state-sub st))
          (diseq (state-diseq st))
-         (newsub (unify u v st)))
+         (newsub (unify/sub u v sub diseq)))
     (cond
       ((not newsub) diseq)
       ((eq? sub newsub) #f)
@@ -95,7 +86,7 @@
     (and diseq (cons (state (state-sub st) diseq) #f))))
 
 ;; Reification
-(define (walk* tm sub)
+#|(define (walk* tm sub)
   (let ((tm (walk tm sub)))
     (if (pair? tm)
         `(,(walk* (car tm) sub) .  ,(walk* (cdr tm) sub))
@@ -111,5 +102,25 @@
                     ((var? t)  (set! index (+ 1 index))
                                (extend-sub t (reified-index index) sub))
                     (else      sub)))))
+(define (reify/initial-var st)
+  (reify initial-var st))|#
+
+;; Reification
+(define (walk* tm st)
+  (let* ((sub (state-sub st)) (tm (walk tm sub)))
+    (if (pair? tm)
+        `(,(walk* (car tm) st) .  ,(walk* (cdr tm) st))
+        tm)))
+(define (reified-index index)
+  (string->symbol
+    (string-append "_." (number->string index))))
+(define (reify tm st)
+  (define index -1)
+  (walk* tm (let loop ((tm tm) (st st))
+              (define t (walk tm (state-sub st)))
+              (cond ((pair? t) (loop (cdr t) (loop (car t) st)))
+                    ((var? t)  (set! index (+ 1 index))
+                               (state (extend-sub t (reified-index index) (state-sub st) (state-diseq st)) (state-diseq st)))
+                    (else      st)))))
 (define (reify/initial-var st)
   (reify initial-var st))
