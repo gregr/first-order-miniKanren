@@ -112,6 +112,17 @@
    (run* (q) (=/= 5 q))
    '(((_.0) (=/= ((_.0 5))))))
 
+(test 'diseq-2
+   (run* (x y) (== x 1) (== y 2) (=/= (cons x y) (cons 1 2)))
+   '())
+
+(test 'diseq-3
+   (run* (x y) (=/= (cons x y) (cons 1 2)) (== x 1) (== y 2))
+   '())
+
+(test 'diseq-4
+   (run* (x y z) (=/= x z) (== x y) (== y z))
+   '())
 
 (test 'appendo-1
   (run* (xs ys) (appendo xs ys '(a b c d)))
