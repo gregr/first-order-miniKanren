@@ -65,7 +65,7 @@
       (else                                (and (eqv? u v) sub)))))
 (define (unify u v st)
   (let ((sub (unify/sub u v (state-sub st) (state-diseq st))))
-    (and sub (cons (state sub (state-diseq st)) #f))))
+    (and sub (if (eq? sub (state-sub st)) (cons (state sub (state-diseq st)) #f) (___?___)))))
 
 (define (disunify/sub u v st)
   (let* ((sub (state-sub st))
@@ -105,22 +105,31 @@
 (define (reify/initial-var st)
   (reify initial-var st))|#
 
+(struct A (term constraints) #:prefab)
+;(struct V (index) #:prefab)
+
 ;; Reification
 (define (walk* tm st)
   (let* ((sub (state-sub st)) (tm (walk tm sub)))
     (if (pair? tm)
         `(,(walk* (car tm) st) .  ,(walk* (cdr tm) st))
         tm)))
+;(define (reified-index index)
+;  (V index))
 (define (reified-index index)
   (string->symbol
     (string-append "_." (number->string index))))
 (define (reify tm st)
   (define index -1)
-  (walk* tm (let loop ((tm tm) (st st))
+  (let ((x (let loop ((tm tm) (st st))
               (define t (walk tm (state-sub st)))
               (cond ((pair? t) (loop (cdr t) (loop (car t) st)))
                     ((var? t)  (set! index (+ 1 index))
                                (state (extend-sub t (reified-index index) (state-sub st) (state-diseq st)) (state-diseq st)))
                     (else      st)))))
+    (if (null? (state-diseq st)) (walk* tm x) (A (walk* tm x) (walk* (cons '=/= (map pretty-diseq (state-diseq st))) x)))))
+
 (define (reify/initial-var st)
   (reify initial-var st))
+
+(define (pretty-diseq =/=s) (map (lambda (=/=) (list (car =/=) (cdr =/=))) =/=s))
