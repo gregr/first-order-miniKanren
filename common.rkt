@@ -84,7 +84,7 @@
 (define (disunify u v st)
   (let* ((sub (state-sub st))
          (diseq (state-diseq st))
-         (newsub (unify/sub u v sub)))
+         (newsub (state-sub (car (unify u v st)))))
     (cond
       ((not newsub) st)
       ((eq? newsub sub) #f)
