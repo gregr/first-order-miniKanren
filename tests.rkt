@@ -128,6 +128,18 @@
    (run* (x) (=/= x 12) (=/= x 18)) 
    '(#s(A (_.0) (=/= ((_.0 18)) ((_.0 12))))))
 
+(test 'symbolo-1
+   (run 1 (x) (symbolo x))
+   '(#s(A (_.0) (sym _.0))))
+
+(test 'stringo-1
+   (run* (x) (stringo x))
+   '(#s(A (_.0) (str _.0))))
+
+(test 'numbero-1
+   (run* (x) (numbero x))
+   '(#s(A (_.0) (num _.0))))
+
 (test 'appendo-1
   (run* (xs ys) (appendo xs ys '(a b c d)))
   '((()        (a b c d))

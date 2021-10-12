@@ -8,6 +8,7 @@
   state-sub
   unify
   disunify
+  type-check
   walk*
   reify
   reify/initial-var)
@@ -43,19 +44,15 @@
 (define (contradicts? sub diseq)
   (ormap (lambda (x) (implies? sub x)) diseq))
 
-; new stuff pause
+; new stuff end
 
 (define (extend-sub x t sub)
   (and (not (occurs? x t sub)) `((,x . ,t) . ,sub)))
-
-; new stuff resume
 
 (define empty-diseq '())
 
 (define (extend-diseq =/=s diseq)
   (cons =/=s diseq))
-
-; new stuff pause
 
 (struct state (sub diseq) #:prefab)
 (define empty-state (state empty-sub empty-diseq))
@@ -74,8 +71,7 @@
   (let ((sub (unify/sub u v (state-sub st))))
     (and sub (not (contradicts? sub (state-diseq st))) (cons (state sub (state-diseq st)) #f)))) 
 
-; new stuff resume
-
+;; Disunification
 (define (disunify-helper sub newsub acc)
   (cond
     ((eq? sub newsub) (reverse acc))
@@ -90,7 +86,9 @@
       ((eq? newsub sub) #f)
       (else (cons (state sub (extend-diseq (disunify-helper sub newsub '()) diseq)) #f)))))
 
-; new stuff end
+;; Type constraints
+(define (type-check type u st)
+  st)
 
 ;; Reification
 #|(define (walk* tm sub)
