@@ -140,6 +140,10 @@
    (run* (x) (numbero x))
    '(#s(A (_.0) (num _.0))))
 
+(test 'multiply-type-constraints
+    (run* (x y) (numbero x) (symbolo y))
+    '(#s(A (_.0 _.1) (num _.0) (sym _.1))))
+
 (test 'appendo-1
   (run* (xs ys) (appendo xs ys '(a b c d)))
   '((()        (a b c d))
