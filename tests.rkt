@@ -124,6 +124,10 @@
    (run* (x y z) (=/= x z) (== x y) (== y z))
    '())
 
+(test 'diseq-5
+   (run* (x) (=/= x 12) (=/= x 18)) 
+   '(#s(A (_.0) (=/= ((_.0 18)) ((_.0 12))))))
+
 (test 'appendo-1
   (run* (xs ys) (appendo xs ys '(a b c d)))
   '((()        (a b c d))
