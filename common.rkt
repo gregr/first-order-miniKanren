@@ -41,8 +41,13 @@
 (define (implies? sub =/=s)
   (andmap (lambda (x) (implies-one? sub (car x) (cdr x))) =/=s))
 
-(define (contradicts? sub diseq)
-  (ormap (lambda (x) (implies? sub x)) diseq))
+(define (correct-type? sub type-constraint)
+  (let ((u (walk (cdr type-constraint) sub))
+        (type? (car type-constraint))) 
+      (or (var? u) (type? u))))
+
+(define (contradicts? sub diseq types)
+  (or (ormap (lambda (x) (implies? sub x)) diseq) (ormap (lambda (x) (not (correct-type? sub x))) types)))
 
 ; new stuff end
 
@@ -54,8 +59,13 @@
 (define (extend-diseq =/=s diseq)
   (cons =/=s diseq))
 
-(struct state (sub diseq) #:prefab)
-(define empty-state (state empty-sub empty-diseq))
+(define empty-types '())
+
+(define (extend-types constraint types)
+  (cons constraint types))
+
+(struct state (sub diseq types) #:prefab)
+(define empty-state (state empty-sub empty-diseq empty-types))
 
 ;; Unification
 (define (unify/sub u v sub)
@@ -68,8 +78,10 @@
                                              (and sub (unify/sub (cdr u) (cdr v) sub))))
       (else                                (and (eqv? u v) sub)))))
 (define (unify u v st)
-  (let ((sub (unify/sub u v (state-sub st))))
-    (and sub (not (contradicts? sub (state-diseq st))) (cons (state sub (state-diseq st)) #f)))) 
+  (let ((sub (unify/sub u v (state-sub st)))
+        (diseq (state-diseq st))
+        (types (state-types st)))
+    (and sub (not (contradicts? sub diseq types)) (cons (state sub diseq types) #f)))) 
 
 ;; Disunification
 (define (disunify-helper sub newsub acc)
@@ -80,15 +92,23 @@
 (define (disunify u v st)
   (let* ((sub (state-sub st))
          (diseq (state-diseq st))
+         (types (state-types st))
          (newsub (state-sub (car (unify u v st)))))
     (cond
       ((not newsub) st)
       ((eq? newsub sub) #f)
-      (else (cons (state sub (extend-diseq (disunify-helper sub newsub '()) diseq)) #f)))))
+      (else (cons (state sub (extend-diseq (disunify-helper sub newsub '()) diseq) types) #f)))))
 
 ;; Type constraints
 (define (type-check type u st)
-  st)
+  ;(cons st #f))
+  (let* ((sub (state-sub st))
+         (diseq (state-diseq st))
+         (u (walk u sub)))
+    (cond
+      ((type u) st)
+      ((var? u) (cons (state sub diseq (extend-types (cons type u) (state-types st))) #f))
+      (else #f))))
 
 ;; Reification
 #|(define (walk* tm sub)
@@ -110,7 +130,7 @@
 (define (reify/initial-var st)
   (reify initial-var st))|#
 
-(struct A (term constraints) #:prefab)
+(struct A (term diseq-constraints type-constraints) #:prefab)
 ;(struct V (index) #:prefab)
 
 ;; Reification
@@ -130,11 +150,24 @@
               (define t (walk tm (state-sub st)))
               (cond ((pair? t) (loop (cdr t) (loop (car t) st)))
                     ((var? t)  (set! index (+ 1 index))
-                               (state (extend-sub t (reified-index index) (state-sub st)) (state-diseq st)))
+                               (state (extend-sub t (reified-index index) (state-sub st)) (state-diseq st) (state-types st)))
                     (else      st)))))
-    (if (null? (state-diseq st)) (walk* tm x) (A (walk* tm x) (walk* (cons '=/= (map pretty-diseq (state-diseq st))) x)))))
+    (cond
+      ((and (null? (state-diseq st)) (null? (state-types st))) (walk* tm x))
+      ((null? (state-types st)) (A (walk* tm x) (walk* (cons '=/= (map pretty-diseq (state-diseq st))) x) '()))
+      ((null? (state-diseq st)) (A (walk* tm x) '() (walk* (map pretty-types (state-types st)) x)))
+      (else (A (walk* tm x) (walk* (cons '=/=' (map pretty-diseq (state-diseq st))) x) (walk* (map pretty-types (state-types st)) x))))))
+    ;(if (null? (state-diseq st)) (walk* tm x) (A (walk* tm x) (walk* (cons '=/= (map pretty-diseq (state-diseq st))) x)))))
 
 (define (reify/initial-var st)
   (reify initial-var st))
 
 (define (pretty-diseq =/=s) (map (lambda (=/=) (list (car =/=) (cdr =/=))) =/=s))
+(define (pretty-types constraint) (list (type-check->sym (car constraint)) (cdr constraint)))
+
+(define (type-check->sym pred)
+  (cond
+    ((eq? pred symbol?) 'sym)
+    ((eq? pred string?) 'str)
+    ((eq? pred number?) 'num)
+    (else 'not-implemented)))
