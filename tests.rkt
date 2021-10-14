@@ -108,6 +108,10 @@
   (run* (q) (== 5 q))
   '((5)))
 
+(test 'basic-2
+  (run* (a b) (== 9 a) (conde ((== 7 b)) ((== 8 b))))
+  '((9 7) (9 8)))
+
 (test 'diseq-1
    (run* (q) (=/= 5 q))
    '(#s(A (_.0) (=/= ((_.0 5))))))
@@ -142,7 +146,23 @@
 
 (test 'multiply-type-constraints
     (run* (x y) (numbero x) (symbolo y))
-    '(#s(A (_.0 _.1) (num _.0) (sym _.1))))
+    '(#s(A (_.0 _.1) (sym _.1) (num _.0))))
+
+(test 'type-fail-1
+      (run* (x) (numbero x) (symbolo x))
+      '())
+
+(test 'type-fail-2
+      (run* (x y) (== x y) (numbero y) (symbolo x))
+      '())
+
+(test 'type-fail-3
+      (run* (x y) (== x 3) (symbolo y) (== x y))
+      '())
+
+(test 'type-test
+      (run* (x) (== 3 x) (conde ((numbero x)) ((symbolo x))))
+      '((3)))
 
 (test 'appendo-1
   (run* (xs ys) (appendo xs ys '(a b c d)))
