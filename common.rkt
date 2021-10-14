@@ -34,23 +34,6 @@
         ((var? t)  (var=? x t))
         (else      #f)))
 
-; new stuff start
-(define (implies-one? sub v u)
-  (let ((u (walk u sub)) (v (walk v sub))) (eqv? u v)))
-
-(define (implies? sub =/=s)
-  (andmap (lambda (x) (implies-one? sub (car x) (cdr x))) =/=s))
-
-(define (correct-type? sub type-constraint)
-  (let ((u (walk (cdr type-constraint) sub))
-        (type? (car type-constraint))) 
-      (or (var? u) (type? u))))
-
-(define (contradicts? sub diseq types)
-  (or (ormap (lambda (x) (implies? sub x)) diseq) (ormap (lambda (x) (not (correct-type? sub x))) types)))
-
-; new stuff end
-
 (define (extend-sub x t sub)
   (and (not (occurs? x t sub)) `((,x . ,t) . ,sub)))
 
@@ -61,11 +44,23 @@
 
 (define empty-types '())
 
-(define (extend-types constraint types)
-  (cons constraint types))
-
 (struct state (sub diseq types) #:prefab)
 (define empty-state (state empty-sub empty-diseq empty-types))
+
+;; Contradiction checks
+(define (implies-one? sub v u)
+  (let ((u (walk u sub)) (v (walk v sub))) (eqv? u v)))
+
+(define (implies? sub =/=s)
+  (andmap (lambda (x) (implies-one? sub (car x) (cdr x))) =/=s))
+
+(define (correct-type? sub type-constraint)
+  (let ((u (walk (car type-constraint) sub))
+        (type? (cdr type-constraint))) 
+      (or (var? u) (type? u))))
+
+(define (contradicts? sub diseq types)
+  (or (ormap (lambda (x) (implies? sub x)) diseq) (ormap (lambda (x) (not (correct-type? sub x))) types)))
 
 ;; Unification
 (define (unify/sub u v sub)
@@ -100,14 +95,13 @@
       (else (cons (state sub (extend-diseq (disunify-helper sub newsub '()) diseq) types) #f)))))
 
 ;; Type constraints
-(define (type-check type u st)
-  ;(cons st #f))
-  (let* ((sub (state-sub st))
-         (diseq (state-diseq st))
-         (u (walk u sub)))
+(define (type-check type? u st)
+  (let* ((u (walk u (state-sub st)))
+         (ct (walk u (state-types st))))
     (cond
-      ((type u) st)
-      ((var? u) (cons (state sub diseq (extend-types (cons type u) (state-types st))) #f))
+      ((or (type? u) (eq? type? ct)) (cons st #f)) 
+      ((not (var? ct)) #f)                   
+      ((var? u) (cons (state (state-sub st) (state-diseq st) (extend-sub u type? (state-types st))) #f))
       (else #f))))
 
 ;; Reification
@@ -163,7 +157,7 @@
   (reify initial-var st))
 
 (define (pretty-diseq =/=s) (map (lambda (=/=) (list (car =/=) (cdr =/=))) =/=s))
-(define (pretty-types constraint) (list (type-check->sym (car constraint)) (cdr constraint)))
+(define (pretty-types constraint) (list (type-check->sym (cdr constraint)) (car constraint)))
 
 (define (type-check->sym pred)
   (cond
