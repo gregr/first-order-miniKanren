@@ -114,7 +114,7 @@
 
 (test 'diseq-1
    (run* (q) (=/= 5 q))
-   '(#s(A (_.0) (=/= ((_.0 5))))))
+   '(((_.0) (=/= ((_.0 5))))))
 
 (test 'diseq-2
    (run* (x y) (== x 1) (== y 2) (=/= (cons x y) (cons 1 2)))
@@ -130,23 +130,35 @@
 
 (test 'diseq-5
    (run* (x) (=/= x 12) (=/= x 18)) 
-   '(#s(A (_.0) (=/= ((_.0 18)) ((_.0 12))))))
+   '(( (_.0) (=/= ((_.0 18)) ((_.0 12))))))
+
+(test 'type-and-diseq-constraints-1
+   (run* (x) (=/= x 12) (numbero x)) 
+   '(( (_.0) ((num _.0)) (=/= ((_.0 12)) ))))
+
+(test 'type-and-diseq-constraints-2
+   (run* (x) (== x 12) (symbolo x)) 
+   '())
+
+(test 'type-and-diseq-constraints-3
+   (run* (x) (conde ((== x 12)) ((symbolo x) (=/= 13 x))))
+   '((12) ((_.0) ((sym _.0)))))
 
 (test 'symbolo-1
    (run 1 (x) (symbolo x))
-   '(#s(A (_.0) (sym _.0))))
+   '(( (_.0) ((sym _.0)))))
 
 (test 'stringo-1
    (run* (x) (stringo x))
-   '(#s(A (_.0) (str _.0))))
+   '(( (_.0) ((str _.0)))))
 
 (test 'numbero-1
    (run* (x) (numbero x))
-   '(#s(A (_.0) (num _.0))))
+   '(( (_.0) ((num _.0)))))
 
 (test 'multiply-type-constraints
     (run* (x y) (numbero x) (symbolo y))
-    '(#s(A (_.0 _.1) (sym _.1) (num _.0))))
+    '(( (_.0 _.1) ((sym _.1) (num _.0)))))
 
 (test 'type-fail-1
       (run* (x) (numbero x) (symbolo x))

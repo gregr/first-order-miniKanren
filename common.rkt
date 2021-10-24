@@ -88,9 +88,10 @@
   (let* ((sub (state-sub st))
          (diseq (state-diseq st))
          (types (state-types st))
-         (newsub (state-sub (car (unify u v st)))))
+         (unify-answer (unify u v st))
+         (newsub (if unify-answer (state-sub (car unify-answer)) #f)))
     (cond
-      ((not newsub) st)
+      ((not newsub) (cons st #f))
       ((eq? newsub sub) #f)
       (else (cons (state sub (extend-diseq (disunify-helper sub newsub '()) diseq) types) #f)))))
 
@@ -105,53 +106,27 @@
       (else #f))))
 
 ;; Reification
-#|(define (walk* tm sub)
-  (let ((tm (walk tm sub)))
-    (if (pair? tm)
-        `(,(walk* (car tm) sub) .  ,(walk* (cdr tm) sub))
-        tm)))
-(define (reified-index index)
-  (string->symbol
-    (string-append "_." (number->string index))))
-(define (reify tm st)
-  (define index -1)
-  (walk* tm (let loop ((tm tm) (sub (state-sub st)))
-              (define t (walk tm sub))
-              (cond ((pair? t) (loop (cdr t) (loop (car t) sub)))
-                    ((var? t)  (set! index (+ 1 index))
-                               (extend-sub t (reified-index index) sub))
-                    (else      sub)))))
-(define (reify/initial-var st)
-  (reify initial-var st))|#
-
-(struct A (term diseq-constraints type-constraints) #:prefab)
-;(struct V (index) #:prefab)
-
-;; Reification
 (define (walk* tm st)
   (let* ((sub (state-sub st)) (tm (walk tm sub)))
     (if (pair? tm)
         `(,(walk* (car tm) st) .  ,(walk* (cdr tm) st))
         tm)))
-;(define (reified-index index)
-;  (V index))
 (define (reified-index index)
   (string->symbol
     (string-append "_." (number->string index))))
 (define (reify tm st)
   (define index -1)
-  (let ((x (let loop ((tm tm) (st st))
+  (let ((results (let loop ((tm tm) (st st))
               (define t (walk tm (state-sub st)))
               (cond ((pair? t) (loop (cdr t) (loop (car t) st)))
                     ((var? t)  (set! index (+ 1 index))
                                (state (extend-sub t (reified-index index) (state-sub st)) (state-diseq st) (state-types st)))
                     (else      st)))))
     (cond
-      ((and (null? (state-diseq st)) (null? (state-types st))) (walk* tm x))
-      ((null? (state-types st)) (A (walk* tm x) (walk* (cons '=/= (map pretty-diseq (state-diseq st))) x) '()))
-      ((null? (state-diseq st)) (A (walk* tm x) '() (walk* (map pretty-types (state-types st)) x)))
-      (else (A (walk* tm x) (walk* (cons '=/=' (map pretty-diseq (state-diseq st))) x) (walk* (map pretty-types (state-types st)) x))))))
-    ;(if (null? (state-diseq st)) (walk* tm x) (A (walk* tm x) (walk* (cons '=/= (map pretty-diseq (state-diseq st))) x)))))
+      ((and (null? (state-diseq st)) (null? (state-types st))) (walk* tm results))
+      ((null? (state-types st)) (list (walk* tm results) (walk* (cons '=/= (map pretty-diseq (state-diseq st))) results)))
+      ((null? (state-diseq st)) (list (walk* tm results) (walk* (map pretty-types (state-types st)) results)))
+      (else (list (walk* tm results) (walk* (map pretty-types (state-types st)) results) (walk* (cons '=/= (map pretty-diseq (state-diseq st))) results) )))))
 
 (define (reify/initial-var st)
   (reify initial-var st))
