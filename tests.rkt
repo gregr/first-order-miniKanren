@@ -112,6 +112,14 @@
   (run* (a b) (== 9 a) (conde ((== 7 b)) ((== 8 b))))
   '((9 7) (9 8)))
 
+(test 'basic-3
+  (run* (p q) (== p q))
+  '((_.0 _.0)))
+
+(test 'basic-4
+  (run* (p q) (== (cons p 3) (cons 5 q)))
+  '((5 3)))
+
 (test 'diseq-1
    (run* (q) (=/= 5 q))
    '(((_.0) (=/= ((_.0 5))))))
@@ -130,19 +138,11 @@
 
 (test 'diseq-5
    (run* (x) (=/= x 12) (=/= x 18)) 
-   '(( (_.0) (=/= ((_.0 18)) ((_.0 12))))))
+   '(((_.0) (=/= ((_.0 18)) ((_.0 12))))))
 
-(test 'type-and-diseq-constraints-1
-   (run* (x) (=/= x 12) (numbero x)) 
-   '(( (_.0) ((num _.0)) (=/= ((_.0 12)) ))))
-
-(test 'type-and-diseq-constraints-2
-   (run* (x) (== x 12) (symbolo x)) 
-   '())
-
-(test 'type-and-diseq-constraints-3
-   (run* (x) (conde ((== x 12)) ((symbolo x) (=/= 13 x))))
-   '((12) ((_.0) ((sym _.0)))))
+(test 'diseq-6
+   (run* (x) (== x 5) (=/= x 20))
+   '((5)))
 
 (test 'symbolo-1
    (run 1 (x) (symbolo x))
@@ -175,6 +175,30 @@
 (test 'type-test
       (run* (x) (== 3 x) (conde ((numbero x)) ((symbolo x))))
       '((3)))
+
+(test 'type-var-set
+       (run* (x) (== 3 x) (numbero x))
+       '((3)))
+
+(test 'type-and-diseq-constraints-1
+   (run* (x) (=/= x 12) (numbero x)) 
+   '(( (_.0) ((num _.0)) (=/= ((_.0 12)) ))))
+
+(test 'type-and-diseq-constraints-2
+   (run* (x) (== x 12) (symbolo x)) 
+   '())
+
+(test 'type-and-diseq-constraints-3
+   (run* (x) (conde ((== x 12)) ((symbolo x) (=/= 13 x))))
+   '((12) ((_.0) ((sym _.0)))))
+
+(test 'type-and-diseq-constraints-3
+   (run* (x) (conde ((== x 12)) ((symbolo x) (=/= 13 x))))
+   '((12) ((_.0) ((sym _.0)))))
+
+(test 'type-and-diseq-constraints-4
+   (run* (x) (conde ((== x 12)) ((symbolo x) (=/= 13 x))))
+   '((12) ((_.0) ((sym _.0)))))
 
 (test 'appendo-1
   (run* (xs ys) (appendo xs ys '(a b c d)))
