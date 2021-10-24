@@ -108,6 +108,98 @@
   (run* (q) (== 5 q))
   '((5)))
 
+(test 'basic-2
+  (run* (a b) (== 9 a) (conde ((== 7 b)) ((== 8 b))))
+  '((9 7) (9 8)))
+
+(test 'basic-3
+  (run* (p q) (== p q))
+  '((_.0 _.0)))
+
+(test 'basic-4
+  (run* (p q) (== (cons p 3) (cons 5 q)))
+  '((5 3)))
+
+(test 'diseq-1
+   (run* (q) (=/= 5 q))
+   '(((_.0) (=/= ((_.0 5))))))
+
+(test 'diseq-2
+   (run* (x y) (== x 1) (== y 2) (=/= (cons x y) (cons 1 2)))
+   '())
+
+(test 'diseq-3
+   (run* (x y) (=/= (cons x y) (cons 1 2)) (== x 1) (== y 2))
+   '())
+
+(test 'diseq-4
+   (run* (x y z) (=/= x z) (== x y) (== y z))
+   '())
+
+(test 'diseq-5
+   (run* (x) (=/= x 12) (=/= x 18)) 
+   '(((_.0) (=/= ((_.0 18)) ((_.0 12))))))
+
+(test 'diseq-6
+   (run* (x) (== x 5) (=/= x 20))
+   '((5)))
+
+(test 'symbolo-1
+   (run 1 (x) (symbolo x))
+   '(( (_.0) ((sym _.0)))))
+
+(test 'stringo-1
+   (run* (x) (stringo x))
+   '(( (_.0) ((str _.0)))))
+
+(test 'numbero-1
+   (run* (x) (numbero x))
+   '(( (_.0) ((num _.0)))))
+
+(test 'multiply-type-constraints
+    (run* (x y) (numbero x) (symbolo y))
+    '(( (_.0 _.1) ((sym _.1) (num _.0)))))
+
+(test 'type-fail-1
+      (run* (x) (numbero x) (symbolo x))
+      '())
+
+(test 'type-fail-2
+      (run* (x y) (== x y) (numbero y) (symbolo x))
+      '())
+
+(test 'type-fail-3
+      (run* (x y) (== x 3) (symbolo y) (== x y))
+      '())
+
+(test 'type-test
+      (run* (x) (== 3 x) (conde ((numbero x)) ((symbolo x))))
+      '((3)))
+
+(test 'type-var-set
+       (run* (x) (== 3 x) (numbero x))
+       '((3)))
+
+(test 'type-and-diseq-constraints-1
+   (run* (x) (=/= x 12) (numbero x)) 
+   '(( (_.0) ((num _.0)) (=/= ((_.0 12)) ))))
+
+(test 'type-and-diseq-constraints-2
+   (run* (x) (== x 12) (symbolo x)) 
+   '())
+
+(test 'type-and-diseq-constraints-3
+   (run* (x) (conde ((== x 12)) ((symbolo x) (=/= 13 x))))
+   '((12) ((_.0) ((sym _.0)))))
+
+(test 'type-and-diseq-constraints-3
+   (run* (x) (conde ((== x 12)) ((symbolo x) (=/= 13 x))))
+   '((12) ((_.0) ((sym _.0)))))
+
+(test 'type-and-diseq-constraints-4
+   (run* (x) (conde ((== x 12)) ((symbolo x) (=/= 13 x))))
+   '((12) ((_.0) ((sym _.0)))))
+
 (test 'appendo-1
   (run* (xs ys) (appendo xs ys '(a b c d)))
   '((()        (a b c d))
@@ -185,7 +277,7 @@
                                      (list (quote quote) (var ()))))))))))
 
 (displayln "\nThe next test may take many seconds...")
-(test 'evalo-thrine
+#|(test 'evalo-thrine
   (run 1 (p q r) (evalo p q) (evalo q r) (evalo r p))
   '(((quote (quote (app (lambda (list (quote quote)
                                       (list (quote quote)
@@ -542,3 +634,4 @@
     ((1 0 1) (0 1) (1 1 0 1 0 1))
     ((0 1 1) (0 1) (0 0 0 0 0 1))
     ((1 1 1) (0 1) (1 1 0 0 1))))
+|#
