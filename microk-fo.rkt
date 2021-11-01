@@ -44,11 +44,15 @@
      (step (bind (pause st g1) g2)))
     ((relate thunk _)
      (pause st (thunk)))
-    ((== t1 t2) (unify t1 t2 st))
-    ((=/= t1 t2) (disunify t1 t2 st))
-    ((symbolo t) (type-check symbol? t st))
-    ((stringo t) (type-check string? t st))
-    ((numbero t) (type-check number? t st))))
+    ((== t1 t2) (state->stream (unify t1 t2 st)))
+    ((=/= t1 t2) (state->stream (disunify t1 t2 st)))
+    ((symbolo t) (state->stream (type-check symbol? t st)))
+    ((stringo t) (state->stream (type-check string? t st)))
+    ((numbero t) (state->stream (type-check number? t st)))))
+
+(define (state->stream state)
+  (if state (cons state #f) #f))
+
 
 (define (step s)
   (match s
