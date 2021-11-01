@@ -51,12 +51,8 @@
 (define (extend-types x type? types)
   (and (not (occurs? x type? types)) `((,x . ,type?) . ,types)))
 
-(define/match (reduce-types x types acc)
-  ((_ '() acc) (reverse acc))
-  ((x (cons item rest) acc) (if (eq? x (car item))
-                            rest
-                            (reduce-types x rest (cons item acc)))))
- 
+(define (reduce-types t types)
+  (filter (lambda (type-constraint) (not (eq? t (car type-constraint)))) types))
 
 
 (struct state (sub diseq types) #:prefab)
@@ -119,6 +115,21 @@
       ((not (var? ct)) #f)                   
       ((var? u) (state (state-sub st) (state-diseq st) (extend-sub u type? (state-types st))))
       (else #f))))
+
+(define (type-simplify t st [add-type #f])
+  (let* ((sub (state-sub st))
+         (types (state-types st))
+         (diseqs (state-diseq st))
+         (type-t (assf (lambda (x) (var=? t x)) types))
+         (xt (and (var? t) (assf (lambda (x) (var=? t x)) sub)))
+         (new-types (if type-t (reduce-types t types) types)))
+    (cond
+      ((and add-type type-t (not (eq? add-type type-t))) #f)
+      ((and xt (not type-t)) (type-simplify (cdr xt) st))
+      ((and xt type-t) (type-simplify (cdr xt) (state sub diseqs new-types) (cdr type-t)))
+      ((and (var? t) add-type) (state sub diseqs (cons (cons t add-type) new-types)))
+      (else (state sub diseqs new-types))
+    )))
 
 ;; Reification
 (define (walk* tm st)
