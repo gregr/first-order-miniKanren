@@ -39,7 +39,7 @@
 (define (walk-types t sub types)
   (let* ((walked-t (walk t sub))
          (xt (assf (lambda (x) (var=? walked-t x)) types)))
-    (if xt (car xt) t)))
+    (if xt (cdr xt) #f)))
 
 
 (define (extend-sub x t sub)
@@ -57,6 +57,13 @@
 
 (struct state (sub diseq types) #:prefab)
 (define empty-state (state empty-sub empty-diseq empty-types))
+
+(define (simplify-state t st [add-type #f])
+  (if st
+      (let ((type-simplified (type-simplify t st add-type)))
+        ;#f)
+        (if type-simplified (diseq-simplify type-simplified) #f))
+      #f))
 
 ;; Contradiction checks
 (define (implies-one? sub v u)
@@ -87,7 +94,8 @@
   (let ((sub (unify/sub u v (state-sub st)))
         (diseq (state-diseq st))
         (types (state-types st)))
-    (and sub (not (contradicts? sub diseq types)) (state sub diseq types)))) 
+    (and sub (not (contradicts? sub diseq types)) (state sub diseq types))))
+    ;(and sub (not (contradicts? sub diseq types)) (simplify-state v (simplify-state u (state sub diseq types))))))
 
 ;; Disunification
 (define (disunify-helper sub newsub acc)
@@ -105,15 +113,35 @@
       ((not newsub) st)
       ((eq? newsub sub) #f)
       (else (state sub (extend-diseq (disunify-helper sub newsub '()) diseq) types)))))
+      ;(else (simplify-state u (state sub (extend-diseq (disunify-helper sub newsub '()) diseq) types))))))
+      ;(else (simplify-state v (simplify-state u (state sub (extend-diseq (disunify-helper sub newsub '()) diseq) types)))))))
+
+(define (diseq-simplify st)
+  (let* ((sub (state-sub st))
+         (diseq (state-diseq st))
+         (types (state-types st))
+         (new-diseq (map (lambda (x) (filter (lambda (y) (diseq-simplify-helper y st)) x)) diseq)))
+    (if (ormap empty? new-diseq)
+        #f
+        new-diseq)))
+
+(define (diseq-simplify-helper d st)
+  (let* ((sub (state-sub st))
+         (u (walk (car d) sub))
+         (v (walk (cdr d) sub))
+         (u-type (walk-types u sub (state-types st)))
+         (v-type (walk-types v sub (state-types st))))
+    (and (or (eqv? u-type v-type) (not u-type) (not v-type)) (not (eq? u v)))))
 
 ;; Type constraints
 (define (type-check type? u st)
   (let* ((u (walk u (state-sub st)))
-         (ct (walk u (state-types st))))
+         (ct (walk-types u (state-sub st) (state-types st))))
     (cond
       ((or (type? u) (eq? type? ct)) st) 
-      ((not (var? ct)) #f)                   
+      ((not ct) #f)                   
       ((var? u) (state (state-sub st) (state-diseq st) (extend-sub u type? (state-types st))))
+      ;((var? u) (simplify-state u (state (state-sub st) (state-diseq st) (extend-sub u type? (state-types st)))))
       (else #f))))
 
 (define (type-simplify t st [add-type #f])

@@ -192,6 +192,10 @@
    (run* (x) (conde ((== x 12)) ((symbolo x) (=/= 13 x))))
    '((12) ((_.0) ((sym _.0)))))
 
+(test 'type-and-diseq-constraints-4
+   (run* (x) (=/= x 12) (symbolo x)) 
+   '(( (_.0) ((sym _.0)))))
+
 (test 'type-and-diseq-constraints-3
    (run* (x) (conde ((== x 12)) ((symbolo x) (=/= 13 x))))
    '((12) ((_.0) ((sym _.0)))))
