@@ -231,7 +231,7 @@
 (test 'type-and-diseq-constraints-7
    (run* (x) (numbero x) (=/= x 12))
    '(( (_.0) ((num _.0)) (=/= ((_.0 12)) ))))
-#|
+
 (test 'appendo-1
   (run* (xs ys) (appendo xs ys '(a b c d)))
   '((()        (a b c d))
@@ -666,4 +666,3 @@
     ((1 0 1) (0 1) (1 1 0 1 0 1))
     ((0 1 1) (0 1) (0 0 0 0 0 1))
     ((1 1 1) (0 1) (1 1 0 0 1))))
-|#
