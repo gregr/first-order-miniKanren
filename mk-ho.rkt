@@ -1,6 +1,10 @@
 #lang racket
 (provide
   ==
+  =/=
+  symbolo
+  numbero
+  stringo
 
   define-relation
   fresh

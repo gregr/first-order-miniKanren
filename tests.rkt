@@ -144,9 +144,33 @@
    (run* (x) (== x 5) (=/= x 20))
    '((5)))
 
+(test 'diseq-7
+   (run* (x) (== x 5) (=/= 1 20))
+   '((5)))
+
+(test 'diseq-8
+      (run* (x) (== 5 x) (conde ((=/= x 5)) ((=/= 1 20))))
+      '((5)))
+
+(test 'diseq-9
+      (run* (x y z) (== 5 x) (== y 3) (== z 4) (=/= y z))
+      '((5 3 4)))
+
+(test 'diseq-10
+      (run* (p q r s) (=/= (list p p) (list r s)))
+      '(((_.0 _.1 _.2 _.3) (=/= ((_.2 _.3) (_.0 _.2))))))
+
+(test 'diseq-11
+      (run* (x) (== x 5) (=/= (list x 11) (list 5 12)))
+      '((5)))
+
 (test 'symbolo-1
    (run 1 (x) (symbolo x))
    '(( (_.0) ((sym _.0)))))
+
+(test 'symbolo-2
+   (run 1 (x) (symbolo 1))
+   '())
 
 (test 'stringo-1
    (run* (x) (stringo x))
@@ -196,14 +220,18 @@
    (run* (x) (=/= x 12) (symbolo x)) 
    '(( (_.0) ((sym _.0)))))
 
-(test 'type-and-diseq-constraints-3
+(test 'type-and-diseq-constraints-5
    (run* (x) (conde ((== x 12)) ((symbolo x) (=/= 13 x))))
    '((12) ((_.0) ((sym _.0)))))
 
-(test 'type-and-diseq-constraints-4
-   (run* (x) (conde ((== x 12)) ((symbolo x) (=/= 13 x))))
+(test 'type-and-diseq-constraints-6
+   (run* (x) (conde ((== x 12)) ((=/= 13 x) (symbolo x))))
    '((12) ((_.0) ((sym _.0)))))
 
+(test 'type-and-diseq-constraints-7
+   (run* (x) (numbero x) (=/= x 12))
+   '(( (_.0) ((num _.0)) (=/= ((_.0 12)) ))))
+#|
 (test 'appendo-1
   (run* (xs ys) (appendo xs ys '(a b c d)))
   '((()        (a b c d))
@@ -281,7 +309,7 @@
                                      (list (quote quote) (var ()))))))))))
 
 (displayln "\nThe next test may take many seconds...")
-#|(test 'evalo-thrine
+(test 'evalo-thrine
   (run 1 (p q r) (evalo p q) (evalo q r) (evalo r p))
   '(((quote (quote (app (lambda (list (quote quote)
                                       (list (quote quote)

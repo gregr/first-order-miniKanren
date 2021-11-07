@@ -1,9 +1,10 @@
 #lang racket
 (provide
-  (all-from-out "common.rkt")
-  (all-from-out "microk-fo.rkt")
   ==
   =/=
+  symbolo
+  numbero
+  stringo
 
   define-relation
   fresh
@@ -16,5 +17,5 @@
   conj*
   disj*
   )
-(require "common.rkt" "microk-fo.rkt")
+(require "microk-fo.rkt")
 (include "mk-syntax.rkt")
