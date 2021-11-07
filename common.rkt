@@ -37,9 +37,11 @@
         ((var? t)  (var=? x t))
         (else      #f)))
 (define (walk-types t sub types)
-  (let* ((walked-t (walk t sub))
-         (xt (assf (lambda (x) (var=? walked-t x)) types)))
-    (if xt (cdr xt) #f)))
+  (if (var? t)
+      (let* ((walked-t (walk t sub))
+             (xt (assf (lambda (x) (var=? walked-t x)) types)))
+          (if xt (cdr xt) #f))
+      #f))
 
 
 (define (extend-sub x t sub)
@@ -47,9 +49,6 @@
 
 (define (extend-diseq =/=s diseq)
   (cons =/=s diseq))
-
-(define (extend-types x type? types)
-  (and (not (occurs? x type? types)) `((,x . ,type?) . ,types)))
 
 (define (reduce-types t types)
   (filter (lambda (type-constraint) (not (eq? t (car type-constraint)))) types))
@@ -61,7 +60,6 @@
 (define (simplify-state t st [add-type #f])
   (if st
       (let ((type-simplified (type-simplify t st add-type)))
-        ;#f)
         (if type-simplified (diseq-simplify type-simplified) #f))
       #f))
 
@@ -74,7 +72,7 @@
 
 (define (correct-type? sub type-constraint)
   (let ((u (walk (car type-constraint) sub))
-        (type? (cdr type-constraint))) 
+        (type? (cdr type-constraint)))
       (or (var? u) (type? u))))
 
 (define (contradicts? sub diseq types)
@@ -94,8 +92,7 @@
   (let ((sub (unify/sub u v (state-sub st)))
         (diseq (state-diseq st))
         (types (state-types st)))
-    (and sub (not (contradicts? sub diseq types)) (state sub diseq types))))
-    ;(and sub (not (contradicts? sub diseq types)) (simplify-state v (simplify-state u (state sub diseq types))))))
+    (and sub (simplify-state v (simplify-state u (state sub diseq types))))))
 
 ;; Disunification
 (define (disunify-helper sub newsub acc)
@@ -112,18 +109,17 @@
     (cond
       ((not newsub) st)
       ((eq? newsub sub) #f)
-      (else (state sub (extend-diseq (disunify-helper sub newsub '()) diseq) types)))))
-      ;(else (simplify-state u (state sub (extend-diseq (disunify-helper sub newsub '()) diseq) types))))))
-      ;(else (simplify-state v (simplify-state u (state sub (extend-diseq (disunify-helper sub newsub '()) diseq) types)))))))
+      (else (simplify-state v (simplify-state u (state sub (extend-diseq (disunify-helper sub newsub '()) diseq) types)))))))
 
 (define (diseq-simplify st)
   (let* ((sub (state-sub st))
          (diseq (state-diseq st))
          (types (state-types st))
-         (new-diseq (map (lambda (x) (filter (lambda (y) (diseq-simplify-helper y st)) x)) diseq)))
-    (if (ormap empty? new-diseq)
+         (failed? (contradicts? sub diseq types))
+         (new-diseq (filter (lambda (z) (not (empty? z))) (map (lambda (x) (filter (lambda (y) (diseq-simplify-helper y st)) x)) diseq))))
+    (if (or failed? (ormap empty? new-diseq))
         #f
-        new-diseq)))
+        (state sub new-diseq types))))
 
 (define (diseq-simplify-helper d st)
   (let* ((sub (state-sub st))
@@ -131,7 +127,13 @@
          (v (walk (cdr d) sub))
          (u-type (walk-types u sub (state-types st)))
          (v-type (walk-types v sub (state-types st))))
-    (and (or (eqv? u-type v-type) (not u-type) (not v-type)) (not (eq? u v)))))
+    (cond
+      ((eqv? u v) #f)
+      ((and (var? u) (var? v)) (or (eqv? u-type v-type) (not u-type) (not v-type)))
+      ;((and (not (var? u)) (not (var? v))) #f) ; TODO do we need this?
+      ((var? u) (or (not u-type) (u-type v)))
+      ((var? v) (or (not v-type) (v-type u)))
+      (else #t))))
 
 ;; Type constraints
 (define (type-check type? u st)
@@ -139,23 +141,25 @@
          (ct (walk-types u (state-sub st) (state-types st))))
     (cond
       ((or (type? u) (eq? type? ct)) st) 
-      ((not ct) #f)                   
-      ((var? u) (state (state-sub st) (state-diseq st) (extend-sub u type? (state-types st))))
-      ;((var? u) (simplify-state u (state (state-sub st) (state-diseq st) (extend-sub u type? (state-types st)))))
+      (ct #f)
+      ((var? u) (simplify-state u st type?))
       (else #f))))
 
 (define (type-simplify t st [add-type #f])
   (let* ((sub (state-sub st))
          (types (state-types st))
          (diseqs (state-diseq st))
-         (type-t (assf (lambda (x) (var=? t x)) types))
+         (type-t (and (var? t) (assf (lambda (x) (var=? t x)) types)))
          (xt (and (var? t) (assf (lambda (x) (var=? t x)) sub)))
          (new-types (if type-t (reduce-types t types) types)))
     (cond
+      ((and (not (var? t)) (not add-type)) st)
+      ;((not (var? t)) (if (add-type t) st #f)) ; TODO is this needed?
       ((and add-type type-t (not (eq? add-type type-t))) #f)
       ((and xt (not type-t)) (type-simplify (cdr xt) st))
       ((and xt type-t) (type-simplify (cdr xt) (state sub diseqs new-types) (cdr type-t)))
       ((and (var? t) add-type) (state sub diseqs (cons (cons t add-type) new-types)))
+      ((var? t) st)
       (else (state sub diseqs new-types))
     )))
 
