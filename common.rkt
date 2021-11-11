@@ -107,8 +107,8 @@
   (let* ((sub (state-sub st))
          (diseq (state-diseq st))
          (types (state-types st))
-         (st (state sub empty-diseq types))
-    (foldl (lambda (=/=s st) (disunify (map car =/=s) (map cdr =/=s) st)) st diseq))))
+         (st (state sub empty-diseq types)))
+    (foldl (lambda (=/=s st) (disunify (map car =/=s) (map cdr =/=s) st)) st diseq)))
 
 
 ;; Type constraints
@@ -117,7 +117,7 @@
     (if (var? u)
         (let ((u-type (walk-types u (state-types st))))
           (if u-type
-              (and (eqv? type? u-type?) st)
+              (and (eqv? type? u-type) st)
               (diseq-simplify (state (state-sub st)
                                      (state-diseq st)
                                      (extend-types u type? (state-types st))))))
@@ -176,4 +176,4 @@
     ((eq? pred symbol?) 'sym)
     ((eq? pred string?) 'str)
     ((eq? pred number?) 'num)
-    (error 'invalid-type)))
+    (error "Invalid type")))
