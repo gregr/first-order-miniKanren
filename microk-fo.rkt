@@ -46,9 +46,9 @@
      (pause st (thunk)))
     ((== t1 t2) (state->stream (unify t1 t2 st)))
     ((=/= t1 t2) (state->stream (disunify t1 t2 st)))
-    ((symbolo t) (state->stream (typify symbol? t st)))
-    ((stringo t) (state->stream (typify string? t st)))
-    ((numbero t) (state->stream (typify number? t st)))))
+    ((symbolo t) (state->stream (typify t symbol? st)))
+    ((stringo t) (state->stream (typify t string? st)))
+    ((numbero t) (state->stream (typify t number? st)))))
 
 (define (state->stream state)
   (if state (cons state #f) #f))

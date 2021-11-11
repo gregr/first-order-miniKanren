@@ -46,9 +46,9 @@
   (lambda (st) (pause st (thunk))))
 (define (== t1 t2) (lambda (st) (unify t1 t2 st)))
 (define (=/= t1 t2) (lambda (st) (disunify t1 t2 st)))
-(define (symbolo t) (lambda (st) (typify symbol? t st)))
-(define (stringo t) (lambda (st) (typify string? t st)))
-(define (numbero t) (lambda (st) (typify number? t st)))
+(define (symbolo t) (lambda (st) (typify t symbol? st)))
+(define (stringo t) (lambda (st) (typify t string? st)))
+(define (numbero t) (lambda (st) (typify t number? st)))
 
 
 
