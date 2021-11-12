@@ -44,12 +44,14 @@
   (lambda (st) (bind (pause st g1) g2)))
 (define (relate thunk _)
   (lambda (st) (pause st (thunk))))
-(define (== t1 t2) (lambda (st) (unify t1 t2 st)))
-(define (=/= t1 t2) (lambda (st) (disunify t1 t2 st)))
-(define (symbolo t) (lambda (st) (typify t symbol? st)))
-(define (stringo t) (lambda (st) (typify t string? st)))
-(define (numbero t) (lambda (st) (typify t number? st)))
+(define (== t1 t2) (lambda (st) (state->stream (unify t1 t2 st))))
+(define (=/= t1 t2) (lambda (st) (state->stream (disunify t1 t2 st))))
+(define (symbolo t) (lambda (st) (state->stream (typify t symbol? st))))
+(define (stringo t) (lambda (st) (state->stream (typify t string? st))))
+(define (numbero t) (lambda (st) (state->stream (typify t number? st))))
 
+(define (state->stream state)
+  (if state (cons state #f) #f))
 
 
 (define (mplus s1 s2)
