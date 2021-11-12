@@ -104,133 +104,232 @@
                  (printf "FAILURE\nEXPECTED: ~s\nACTUAL: ~s\n"
                          expected actual))))))))
 
-(test 'basic-1
+; Equality tests start here
+(test 'equality-0
+  (run* (q) (== 1 1))
+  '((_.0)))
+
+(test 'equality-1
   (run* (q) (== 5 q))
   '((5)))
 
-(test 'basic-2
-  (run* (a b) (== 9 a) (conde ((== 7 b)) ((== 8 b))))
-  '((9 7) (9 8)))
+(test 'equality-2
+  (run* (q) (== q 5))
+  '((5)))
 
-(test 'basic-3
+(test 'equality-3
   (run* (p q) (== p q))
   '((_.0 _.0)))
 
-(test 'basic-4
+(test 'equality-4
   (run* (p q) (== (cons p 3) (cons 5 q)))
   '((5 3)))
 
+(test 'equality-5
+  (run* (p q r) (== p q) (== q r))
+  '((_.0 _.0 _.0)))
+
+(test 'equality-6
+  (run* (q) (== q 'hello))
+  '((hello)))
+
+(test 'equality-7
+  (run* (q) (== q "world"))
+  '(("world")))
+
+(test 'equality-with-conde-0
+  (run* (q) (conde ((== 4 q)) ((== 1 q))))
+  '((4) (1)))
+
+(test 'equality-with-conde-1
+  (run* (p q) (== 9 p) (conde ((== 7 q)) ((== 8 q))))
+  '((9 7) (9 8)))
+
+(test 'equality-with-conde-2
+  (run* (p q r) (conde ((== p q)) ((== p r))))
+  '((_.0 _.0 _.1) (_.0 _.1 _.0)))
+
+(test 'equality-fail-0
+  (run* (q) (== q 41) (== q 64))
+  '())
+
+(test 'equality-fail-1
+  (run* (q) (== 93 37) (== q 6))
+  '())
+
+; Disequality tests start here
+(test 'diseq-0
+  (run* (q) (=/= 101 5))
+  '((_.0)))
+
 (test 'diseq-1
-   (run* (q) (=/= 5 q))
-   '(((_.0) (=/= ((_.0 5))))))
+  (run* (q) (=/= 5 q))
+  '(((_.0) (=/= ((_.0 5))))))
 
 (test 'diseq-2
-   (run* (x y) (== x 1) (== y 2) (=/= (cons x y) (cons 1 2)))
-   '())
+  (run* (q) (=/= q 5))
+  '(((_.0) (=/= ((_.0 5))))))
 
 (test 'diseq-3
-   (run* (x y) (=/= (cons x y) (cons 1 2)) (== x 1) (== y 2))
-   '())
+  (run* (p q) (=/= p q))
+  '(((_.0 _.1) (=/= ((_.0 _.1))))))
 
 (test 'diseq-4
-   (run* (x y z) (=/= x z) (== x y) (== y z))
-   '())
+  (run* (q) (=/= q 12) (=/= q 18)) 
+  '(((_.0) (=/= ((_.0 18)) ((_.0 12))))))
 
 (test 'diseq-5
-   (run* (x) (=/= x 12) (=/= x 18)) 
-   '(((_.0) (=/= ((_.0 18)) ((_.0 12))))))
+  (run* (p q r s) (=/= (list p p) (list r s)))
+  '(((_.0 _.1 _.2 _.3) (=/= ((_.2 _.3) (_.0 _.2))))))
 
 (test 'diseq-6
-   (run* (x) (== x 5) (=/= x 20))
-   '((5)))
+  (run* (q) (=/= q 'hello))
+  '(((_.0) (=/= ((_.0 hello))))))
 
 (test 'diseq-7
-   (run* (x) (== x 5) (=/= 1 20))
-   '((5)))
+  (run* (q) (=/= q "world"))
+  '(((_.0) (=/= ((_.0 "world"))))))
 
-(test 'diseq-8
-      (run* (x) (== 5 x) (conde ((=/= x 5)) ((=/= 1 20))))
-      '((5)))
+(test 'equality-diseq-0
+  (run* (q) (== q 29) (=/= q 17))
+  '((29)))
 
-(test 'diseq-9
-      (run* (x y z) (== 5 x) (== y 3) (== z 4) (=/= y z))
-      '((5 3 4)))
+(test 'equality-diseq-1
+  (run* (q) (=/= q 17) (== q 29))
+  '((29)))
 
-(test 'diseq-10
-      (run* (p q r s) (=/= (list p p) (list r s)))
-      '(((_.0 _.1 _.2 _.3) (=/= ((_.2 _.3) (_.0 _.2))))))
+(test 'equality-diseq-2
+  (run* (x) (== x 5) (=/= 1 20))
+  '((5)))
 
-(test 'diseq-11
-      (run* (x) (== x 5) (=/= (list x 11) (list 5 12)))
-      '((5)))
+(test 'equality-diseq-3
+  (run* (p q) (== p 3) (== q 4) (=/= p q))
+  '((3 4)))
 
-(test 'symbolo-1
-   (run 1 (x) (symbolo x))
-   '(( (_.0) ((sym _.0)))))
+(test 'equality-diseq-4
+  (run* (p q) (=/= p q) (== p 3) (== q 4))
+  '((3 4)))
 
-(test 'symbolo-2
-   (run 1 (x) (symbolo 1))
-   '())
+(test 'equality-diseq-5
+  (run* (x) (== x 13) (=/= (list x 11) (list 13 12)))
+  '((13)))
 
-(test 'stringo-1
-   (run* (x) (stringo x))
-   '(( (_.0) ((str _.0)))))
+(test 'equality-diseq-6
+  (run* (x) (=/= (list x 11) (list 13 12)) (== x 13))
+  '((13)))
 
-(test 'numbero-1
-   (run* (x) (numbero x))
-   '(( (_.0) ((num _.0)))))
+(test 'diseq-with-conde-0
+  (run* (q) (conde ((=/= q 77)) ((=/= q 54))))
+  '((_.0 (=/= ((_.0 77)))) (_.0 (=/= ((_.0 54))))))
 
-(test 'multiply-type-constraints
-    (run* (x y) (numbero x) (symbolo y))
-    '(( (_.0 _.1) ((sym _.1) (num _.0)))))
+(test 'diseq-with-conde-1
+  (run* (x) (== x 5) (conde ((=/= x 5)) ((=/= 1 20))))
+  '((5)))
+
+(test 'diseq-fail-0
+  (run* (q) (=/= 1 1))
+  '())
+
+(test 'diseq-fail-1
+  (run* (p q) (== p 1) (== q 2) (=/= (cons p q) (cons 1 2)))
+  '())
+
+(test 'diseq-fail-2
+  (run* (p q) (=/= (cons p q) (cons 1 2)) (== p 1) (== q 2))
+  '())
+
+(test 'diseq-fail-3
+  (run* (p q) (=/= p 1) (=/= q 2) (== (cons p q) (cons 1 2)))
+  '())
+
+(test 'diseq-fail-4
+  (run* (p q) (== (cons p q) (cons 1 2)) (=/= p 1) (=/= q 2))
+  '())
+
+(test 'diseq-fail-5
+  (run* (p q r) (=/= p r) (== p q) (== q r))
+  '())
+
+; Type tests start here
+(test 'symbolo-0
+  (run 1 (x) (symbolo x))
+  '(( (_.0) ((sym _.0)))))
+
+(test 'stringo-0
+  (run* (x) (stringo x))
+  '(( (_.0) ((str _.0)))))
+
+(test 'numbero-0
+  (run* (x) (numbero x))
+  '(( (_.0) ((num _.0)))))
+
+(test 'symbolo-fail-0
+  (run 1 (x) (symbolo 1))
+  '())
+
+(test 'string-fail-0
+  (run 1 (x) (stringo 'f))
+  '())
+
+(test 'numbero-fail-0
+  (run 1 (x) (numbero "h"))
+  '())
+
+(test 'multiple-type-constraints
+  (run* (x y) (numbero x) (symbolo y))
+  '(( (_.0 _.1) ((sym _.1) (num _.0)))))
+
+(test 'type-var-set-0
+  (run* (x) (== 3 x) (numbero x))
+  '((3)))
+
+(test 'type-var-set-1
+  (run* (x) (numbero x) (== 3 x))
+  '((3)))
+
+(test 'type-fail-0
+  (run* (x) (numbero x) (symbolo x))
+  '())
 
 (test 'type-fail-1
-      (run* (x) (numbero x) (symbolo x))
-      '())
+  (run* (x y) (== x y) (numbero y) (symbolo x))
+  '())
 
 (test 'type-fail-2
-      (run* (x y) (== x y) (numbero y) (symbolo x))
-      '())
+  (run* (x) (== x 12) (symbolo x)) 
+  '())
 
 (test 'type-fail-3
-      (run* (x y) (== x 3) (symbolo y) (== x y))
-      '())
+  (run* (x y) (== x 3) (symbolo y) (== x y))
+  '())
 
-(test 'type-test
-      (run* (x) (== 3 x) (conde ((numbero x)) ((symbolo x))))
-      '((3)))
-
-(test 'type-var-set
-       (run* (x) (== 3 x) (numbero x))
-       '((3)))
+(test 'type-and-diseq-constraints-0
+  (run* (x) (=/= x 12) (numbero x)) 
+  '(( (_.0) ((num _.0)) (=/= ((_.0 12)) ))))
 
 (test 'type-and-diseq-constraints-1
-   (run* (x) (=/= x 12) (numbero x)) 
-   '(( (_.0) ((num _.0)) (=/= ((_.0 12)) ))))
+  (run* (x) (numbero x) (=/= x 12)) 
+  '(( (_.0) ((num _.0)) (=/= ((_.0 12)) ))))
 
 (test 'type-and-diseq-constraints-2
-   (run* (x) (== x 12) (symbolo x)) 
-   '())
+  (run* (x) (=/= x 12) (symbolo x)) 
+  '(( (_.0) ((sym _.0)))))
 
 (test 'type-and-diseq-constraints-3
-   (run* (x) (conde ((== x 12)) ((symbolo x) (=/= 13 x))))
-   '((12) ((_.0) ((sym _.0)))))
+  (run* (x) (symbolo x) (=/= x 12)) 
+  '(( (_.0) ((sym _.0)))))
 
-(test 'type-and-diseq-constraints-4
-   (run* (x) (=/= x 12) (symbolo x)) 
-   '(( (_.0) ((sym _.0)))))
+(test 'type-with-conde-0
+  (run* (x) (== 3 x) (conde ((numbero x)) ((symbolo x))))
+  '((3)))
 
-(test 'type-and-diseq-constraints-5
-   (run* (x) (conde ((== x 12)) ((symbolo x) (=/= 13 x))))
-   '((12) ((_.0) ((sym _.0)))))
+(test 'type-with-conde-1
+  (run* (x) (conde ((== x 12)) ((symbolo x) (=/= 13 x))))
+  '((12) ((_.0) ((sym _.0)))))
 
-(test 'type-and-diseq-constraints-6
-   (run* (x) (conde ((== x 12)) ((=/= 13 x) (symbolo x))))
-   '((12) ((_.0) ((sym _.0)))))
-
-(test 'type-and-diseq-constraints-7
-   (run* (x) (numbero x) (=/= x 12))
-   '(( (_.0) ((num _.0)) (=/= ((_.0 12)) ))))
+(test 'type-with-conde-2
+  (run* (x) (conde ((== x 12)) ((=/= x 'm) (symbolo x))))
+  '((12) ((_.0) ((sym _.0)) (=/= ((_.0 m))))))
 
 (test 'appendo-1
   (run* (xs ys) (appendo xs ys '(a b c d)))
