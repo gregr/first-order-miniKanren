@@ -50,10 +50,6 @@
 (define (stringo t) (lambda (st) (state->stream (typify t string? st))))
 (define (numbero t) (lambda (st) (state->stream (typify t number? st))))
 
-(define (state->stream state)
-  (if state (cons state #f) #f))
-
-
 (define (mplus s1 s2)
   (let ((s1 (if (mature? s1) s1 (s1))))
     (cond ((not s1) s2)

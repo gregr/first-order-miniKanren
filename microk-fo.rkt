@@ -50,10 +50,6 @@
     ((stringo t) (state->stream (typify t string? st)))
     ((numbero t) (state->stream (typify t number? st)))))
 
-(define (state->stream state)
-  (if state (cons state #f) #f))
-
-
 (define (step s)
   (match s
     ((mplus s1 s2)
