@@ -5,7 +5,7 @@
   var/fresh
   (struct-out state)
   empty-state
-  state-sub
+  state->stream
   unify
   disunify
   typify
@@ -62,6 +62,8 @@
 (struct state (sub diseq types) #:prefab)
 (define empty-state (state empty-sub empty-diseq empty-types))
 
+(define (state->stream state)
+  (if state (cons state #f) #f))
 
 ;; Unification
 (define (assign-var u v st)
@@ -108,8 +110,13 @@
          (diseq (state-diseq st))
          (types (state-types st))
          (st (state sub empty-diseq types)))
-    (foldl (lambda (=/=s st) (disunify (map car =/=s) (map cdr =/=s) st)) st diseq)))
+    (foldl/and (lambda (=/=s st) (disunify (map car =/=s) (map cdr =/=s) st)) st diseq)))
 
+(define (foldl/and proc acc lst)
+  (if (empty? lst)
+      acc
+      (let ((new-acc (proc (car lst) acc)))
+        (if new-acc (foldl/and proc new-acc (cdr lst)) #f))))
 
 ;; Type constraints
 (define (typify u type? st)
