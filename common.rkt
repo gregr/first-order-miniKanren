@@ -154,23 +154,13 @@
       ((and (null? (state-diseq st)) (null? (state-types st))) (walk* tm results))
       ((null? (state-types st)) (Ans 
                                   (walk* tm results)
-                                  (walk* (cons '=/= (map pretty-diseq (state-diseq st))) results)))
+                                  (list (walk* (cons '=/= (map pretty-diseq (state-diseq st))) results))))
       ((null? (state-diseq st)) (Ans
                                   (walk* tm results)
                                   (walk* (map pretty-types (state-types st)) results)))
       (else (Ans (walk* tm results) 
-                (list (walk* (map pretty-types (state-types st)) results) 
-                      (walk* (cons '=/= (map pretty-diseq (state-diseq st))) results) ))))))
-      ; ((and (null? (state-diseq st)) (null? (state-types st))) (walk* tm results))
-      ; ((null? (state-types st)) (list 
-      ;                             (walk* tm results)
-      ;                             (walk* (cons '=/= (map pretty-diseq (state-diseq st))) results)))
-      ; ((null? (state-diseq st)) (list
-      ;                             (walk* tm results)
-      ;                             (walk* (map pretty-types (state-types st)) results)))
-      ; (else (list (walk* tm results) 
-      ;             (walk* (map pretty-types (state-types st)) results) 
-      ;             (walk* (cons '=/= (map pretty-diseq (state-diseq st))) results) )))))
+                (append (walk* (map pretty-types (state-types st)) results) 
+                        (list (walk* (cons '=/= (map pretty-diseq (state-diseq st))) results) )))))))
 
 (define (reify/initial-var st)
   (reify initial-var st))
