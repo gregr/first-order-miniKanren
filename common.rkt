@@ -38,14 +38,9 @@
         ((var? t)  (var=? x t))
         (else      #f)))
 
-(define (walk-types t types)
-  (cond
-    ((number? t) number?)
-    ((symbol? t) symbol?)
-    ((string? t) string?)
-    ((var? t) (let* ((xt (assf (lambda (x) (var=? t x)) types)))
-                (if xt (cdr xt) #f)))
-    (else #f)))
+(define (var-type-ref t types)
+    (let* ((xt (assf (lambda (x) (var=? t x)) types)))
+      (if xt (cdr xt) #f)))
 
 (define (extend-sub x t sub)
   (and (not (occurs? x t sub)) `((,x . ,t) . ,sub)))
@@ -56,8 +51,8 @@
 (define (extend-types x t types)
   `((,x . ,t) . ,types))
 
-(define (reduce-types t types)
-  (filter (lambda (type-constraint) (not (eq? t (car type-constraint)))) types))
+(define (var-type-remove t types)
+  (remove t types (lambda (v type-constraint) (eq? v (car type-constraint)))))
 
 (struct state (sub diseq types) #:prefab)
 (define empty-state (state empty-sub empty-diseq empty-types))
@@ -68,8 +63,8 @@
 ;; Unification
 (define (assign-var u v st)
   (let* ((types (state-types st))
-         (u-type (walk-types u types))
-         (types (if u-type (reduce-types u types) types))
+         (u-type (var-type-ref u types))
+         (types (if u-type (var-type-remove u types) types))
          (new-sub (extend-sub u v (state-sub st))))
     (and new-sub (let ((st (state new-sub (state-diseq st) types)))
                     (if u-type
@@ -113,16 +108,16 @@
     (foldl/and (lambda (=/=s st) (disunify (map car =/=s) (map cdr =/=s) st)) st diseq)))
 
 (define (foldl/and proc acc lst)
-  (if (empty? lst)
+  (if (null? lst)
       acc
       (let ((new-acc (proc (car lst) acc)))
-        (if new-acc (foldl/and proc new-acc (cdr lst)) #f))))
+        (and new-acc (foldl/and proc new-acc (cdr lst))))))
 
 ;; Type constraints
 (define (typify u type? st)
   (let ((u (walk u (state-sub st))))
     (if (var? u)
-        (let ((u-type (walk-types u (state-types st))))
+        (let ((u-type (var-type-ref u (state-types st))))
           (if u-type
               (and (eqv? type? u-type) st)
               (diseq-simplify (state (state-sub st)
@@ -150,17 +145,14 @@
                     ((var? t)  (set! index (+ 1 index))
                                (state (extend-sub t (reified-index index) (state-sub st)) (state-diseq st) (state-types st)))
                     (else      st)))))
-    (cond
-      ((and (null? (state-diseq st)) (null? (state-types st))) (walk* tm results))
-      ((null? (state-types st)) (Ans 
-                                  (walk* tm results)
-                                  (list (walk* (cons '=/= (map pretty-diseq (state-diseq st))) results))))
-      ((null? (state-diseq st)) (Ans
-                                  (walk* tm results)
-                                  (walk* (map pretty-types (state-types st)) results)))
-      (else (Ans (walk* tm results) 
-                (append (walk* (map pretty-types (state-types st)) results) 
-                        (list (walk* (cons '=/= (map pretty-diseq (state-diseq st))) results) )))))))
+    (let* ((walked-sub (walk* tm results))
+          (diseq-null (null? (state-diseq st)))
+          (types-null (null? (state-types st)))
+          (types (walk* (map pretty-types (state-types st)) results))
+          (diseq (if diseq-null '() (list (walk* (cons '=/= (map pretty-diseq (state-diseq st))) results)))))
+      (if (and diseq-null types-null)
+          walked-sub
+          (Ans walked-sub (append types diseq))))))
 
 (define (reify/initial-var st)
   (reify initial-var st))
