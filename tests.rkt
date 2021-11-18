@@ -164,31 +164,31 @@
 
 (test 'diseq-1
   (run* (q) (=/= 5 q))
-  '(((_.0) (=/= ((_.0 5))))))
+  '(#s(Ans (_.0) ((=/= ((_.0 5)))))))
 
 (test 'diseq-2
   (run* (q) (=/= q 5))
-  '(((_.0) (=/= ((_.0 5))))))
+  '(#s(Ans (_.0) ((=/= ((_.0 5)))))))
 
 (test 'diseq-3
   (run* (p q) (=/= p q))
-  '(((_.0 _.1) (=/= ((_.0 _.1))))))
+  '(#s(Ans (_.0 _.1) ((=/= ((_.0 _.1)))))))
 
 (test 'diseq-4
   (run* (q) (=/= q 12) (=/= q 18)) 
-  '(((_.0) (=/= ((_.0 18)) ((_.0 12))))))
+  '(#s(Ans (_.0) ((=/= ((_.0 18)) ((_.0 12)))))))
 
 (test 'diseq-5
   (run* (p q r s) (=/= (list p p) (list r s)))
-  '(((_.0 _.1 _.2 _.3) (=/= ((_.2 _.3) (_.0 _.2))))))
+  '(#s(Ans (_.0 _.1 _.2 _.3) ((=/= ((_.2 _.3) (_.0 _.2)))))))
 
 (test 'diseq-6
   (run* (q) (=/= q 'hello))
-  '(((_.0) (=/= ((_.0 hello))))))
+  '(#s(Ans (_.0) ((=/= ((_.0 hello)))))))
 
 (test 'diseq-7
   (run* (q) (=/= q "world"))
-  '(((_.0) (=/= ((_.0 "world"))))))
+  '(#s(Ans (_.0) ((=/= ((_.0 "world")))))))
 
 (test 'equality-diseq-0
   (run* (q) (== q 29) (=/= q 17))
@@ -220,7 +220,7 @@
 
 (test 'diseq-with-conde-0
   (run* (q) (conde ((=/= q 77)) ((=/= q 54))))
-  '((_.0 (=/= ((_.0 77)))) (_.0 (=/= ((_.0 54))))))
+  '(#s(Ans (_.0) ((=/= ((_.0 77))))) #s(Ans (_.0) ((=/= ((_.0 54)))))))
 
 (test 'diseq-with-conde-1
   (run* (x) (== x 5) (conde ((=/= x 5)) ((=/= 1 20))))
@@ -253,15 +253,15 @@
 ; Type tests start here
 (test 'symbolo-0
   (run 1 (x) (symbolo x))
-  '(( (_.0) ((sym _.0)))))
+  '(#s(Ans (_.0) ((sym _.0)))))
 
 (test 'stringo-0
   (run* (x) (stringo x))
-  '(( (_.0) ((str _.0)))))
+  '(#s(Ans (_.0) ((str _.0)))))
 
 (test 'numbero-0
   (run* (x) (numbero x))
-  '(( (_.0) ((num _.0)))))
+  '(#s(Ans (_.0) ((num _.0)))))
 
 (test 'symbolo-fail-0
   (run 1 (x) (symbolo 1))
@@ -277,7 +277,7 @@
 
 (test 'multiple-type-constraints
   (run* (x y) (numbero x) (symbolo y))
-  '(( (_.0 _.1) ((sym _.1) (num _.0)))))
+  '(#s(Ans (_.0 _.1) ((sym _.1) (num _.0)))))
 
 (test 'type-var-set-0
   (run* (x) (== 3 x) (numbero x))
@@ -305,19 +305,19 @@
 
 (test 'type-and-diseq-constraints-0
   (run* (x) (=/= x 12) (numbero x)) 
-  '(( (_.0) ((num _.0)) (=/= ((_.0 12)) ))))
+  '(#s(Ans (_.0) ((num _.0) (=/= ((_.0 12)))))))
 
 (test 'type-and-diseq-constraints-1
   (run* (x) (numbero x) (=/= x 12)) 
-  '(( (_.0) ((num _.0)) (=/= ((_.0 12)) ))))
+  '(#s(Ans (_.0) ((num _.0) (=/= ((_.0 12)))))))
 
 (test 'type-and-diseq-constraints-2
   (run* (x) (=/= x 12) (symbolo x)) 
-  '(( (_.0) ((sym _.0)))))
+  '(#s(Ans (_.0) ((sym _.0)))))
 
 (test 'type-and-diseq-constraints-3
   (run* (x) (symbolo x) (=/= x 12)) 
-  '(( (_.0) ((sym _.0)))))
+  '(#s(Ans (_.0) ((sym _.0)))))
 
 (test 'type-with-conde-0
   (run* (x) (== 3 x) (conde ((numbero x)) ((symbolo x))))
@@ -325,11 +325,11 @@
 
 (test 'type-with-conde-1
   (run* (x) (conde ((== x 12)) ((symbolo x) (=/= 13 x))))
-  '((12) ((_.0) ((sym _.0)))))
+  '((12) #s(Ans (_.0) ((sym _.0)))))
 
 (test 'type-with-conde-2
   (run* (x) (conde ((== x 12)) ((=/= x 'm) (symbolo x))))
-  '((12) ((_.0) ((sym _.0)) (=/= ((_.0 m))))))
+  '((12) #s(Ans (_.0) ((sym _.0) (=/= ((_.0 m)))))))
 
 (test 'appendo-1
   (run* (xs ys) (appendo xs ys '(a b c d)))
