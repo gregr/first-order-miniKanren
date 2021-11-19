@@ -40,7 +40,7 @@
 
 (define (var-type-ref t types)
     (let* ((xt (assf (lambda (x) (var=? t x)) types)))
-      (if xt (cdr xt) #f)))
+      (and xt (cdr xt))))
 
 (define (extend-sub x t sub)
   (and (not (occurs? x t sub)) `((,x . ,t) . ,sub)))
@@ -146,13 +146,13 @@
                                (state (extend-sub t (reified-index index) (state-sub st)) (state-diseq st) (state-types st)))
                     (else      st)))))
     (let* ((walked-sub (walk* tm results))
-          (diseq-null (null? (state-diseq st)))
-          (types-null (null? (state-types st)))
-          (types (walk* (map pretty-types (state-types st)) results))
-          (diseq (if diseq-null '() (list (walk* (cons '=/= (map pretty-diseq (state-diseq st))) results)))))
-      (if (and diseq-null types-null)
+           (types (walk* (map pretty-types (state-types st)) results))
+           (diseq (map pretty-diseq (state-diseq st)))
+           (diseq (if (null? diseq) '() (list (walk* (cons '=/= diseq) results))))
+           (cxs (append types diseq)))
+      (if (null? cxs)
           walked-sub
-          (Ans walked-sub (append types diseq))))))
+          (Ans walked-sub cxs)))))
 
 (define (reify/initial-var st)
   (reify initial-var st))
