@@ -176,11 +176,11 @@
 
 (test 'diseq-4
   (run* (q) (=/= q 12) (=/= q 18)) 
-  '(#s(Ans (_.0) ((=/= ((_.0 18)) ((_.0 12)))))))
+  '(#s(Ans (_.0) ((=/= ((_.0 12)) ((_.0 18)))))))
 
 (test 'diseq-5
   (run* (p q r s) (=/= (list p p) (list r s)))
-  '(#s(Ans (_.0 _.1 _.2 _.3) ((=/= ((_.2 _.3) (_.0 _.2)))))))
+  '(#s(Ans (_.0 _.1 _.2 _.3) ((=/= ((_.0 _.3) (_.2 _.3)))))))
 
 (test 'diseq-6
   (run* (q) (=/= q 'hello))
@@ -331,6 +331,27 @@
   (run* (x) (conde ((== x 12)) ((=/= x 'm) (symbolo x))))
   '((12) #s(Ans (_.0) ((sym _.0) (=/= ((_.0 m)))))))
 
+(test 'pair-test-0
+  (run* (a b c) (== a b) (=/= a (cons c 5)))
+  '(#s(Ans (_.0 _.0 _.1) ((=/= ((_.0 (_.1 . 5))))))))
+
+(test 'fresh-test-0
+  (run* (a b) (fresh (c) (== a b) (=/= c (cons a b))))
+  '((_.0 _.0)))
+
+(test 'fresh-test-1
+  (run* (a b) (fresh (c) (== a b) (=/= a (cons c 5))))
+  '((_.0 _.0)))
+
+(test 'fresh-test-2
+  (run* (a b) (fresh (c) (=/= (cons c 5) (cons a b))))
+  '((_.0 _.1)))
+
+(test 'fresh-test-3
+  (run* (a b) (fresh (c) (== a b) (numbero c)))
+  '((_.0 _.0)))
+
+#|
 (test 'appendo-1
   (run* (xs ys) (appendo xs ys '(a b c d)))
   '((()        (a b c d))
@@ -765,3 +786,4 @@
     ((1 0 1) (0 1) (1 1 0 1 0 1))
     ((0 1 1) (0 1) (0 0 0 0 0 1))
     ((1 1 1) (0 1) (1 1 0 0 1))))
+|#
