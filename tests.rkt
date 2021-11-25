@@ -351,7 +351,18 @@
   (run* (a b) (fresh (c) (== a b) (numbero c)))
   '((_.0 _.0)))
 
-#|
+(test 'fresh-test-4
+  (run* (a b) (fresh (c) (== a c) (== b c)))
+  '((_.0 _.0)))
+
+(test 'fresh-test-5
+  (run* (a) (fresh (c) (== a c) (numbero c)))
+  '(#s(Ans (_.0) ((num _.0)))))
+
+(test 'fresh-test-6
+  (run* (a b) (fresh (c) (=/= b c) (== c a)))
+  '(#s(Ans (_.0 _.1) ((=/= ((_.1 _.0)))))))
+
 (test 'appendo-1
   (run* (xs ys) (appendo xs ys '(a b c d)))
   '((()        (a b c d))
@@ -786,4 +797,3 @@
     ((1 0 1) (0 1) (1 1 0 1 0 1))
     ((0 1 1) (0 1) (0 0 0 0 0 1))
     ((1 1 1) (0 1) (1 1 0 0 1))))
-|#
