@@ -194,7 +194,7 @@
   (if (pair? x)
       (or (contains-fresh? (car x)) (contains-fresh? (cdr x)))
       (var? x)))
-(define (pretty-diseq =/=s) (map (lambda (=/=) (list (car =/=) (cdr =/=))) =/=s))
+(define (pretty-diseq =/=s) (map (lambda (=/=) (let ((x (car =/=)) (y (cdr =/=))) (if (term<? x y) (list y x) (list x y)))) =/=s))
 (define (pretty-types constraint) (list (type-check->sym (cdr constraint)) (car constraint)))
 
 (define (type-check->sym pred)
