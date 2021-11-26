@@ -94,7 +94,7 @@
          (diseq (state-diseq st))
          (types (state-types st))
          (unify-answer (unify u v st))
-         (newsub (if unify-answer (state-sub unify-answer) #f)))
+         (newsub (and unify-answer (state-sub unify-answer))))
     (cond
       ((not newsub) st)
       ((eq? newsub sub) #f)
