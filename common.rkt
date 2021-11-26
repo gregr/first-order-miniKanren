@@ -180,7 +180,7 @@
     ((number? v) 1)
     ((symbol? u) (if (symbol? v) (if (symbol<? u v) -1 1) -1))
     ((symbol? v) 1)
-    ((string? u) (if (string? v) (if (string<? u v) -1 1) -1))
+    ((string? u) (if (string? v) (if (string<? u v) -1 (if (string=? u v) 0 1)) -1))
     ((string? v) 1)
     ((pair? u) (if (pair? v) 
                    (let ((compared-cars (term-compare (car u) (car v))))
@@ -189,8 +189,7 @@
                          compared-cars))
                    -1))
     ((pair? v) 1)
-    (else 1)
-  ))
+    (else 1)))
 
 (define (contains-fresh? x)
   (if (pair? x)
