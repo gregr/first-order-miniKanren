@@ -85,9 +85,9 @@
 
 ;; Disunification
 (define (disunify-helper sub newsub acc)
-  (cond
-    ((eq? sub newsub) (reverse acc))
-    (else (disunify-helper sub (cdr newsub) (cons (car newsub) acc)))))
+  (if (eqv? sub newsub)
+      (reverse acc)
+      (disunify-helper sub (cdr newsub) (cons (car newsub) acc))))
 
 (define (disunify u v st)
   (let* ((sub (state-sub st))
