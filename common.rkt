@@ -149,10 +149,10 @@
            (diseq (sort (state-diseq st) (lambda (x y) (< (length x) (length y)))))
            (st (diseq-simplify (state (state-sub st) diseq (state-types st))))
            (diseq (walk* (map pretty-diseq (state-diseq st)) results))
-           (diseq (filter fresh-var-diseq? diseq))
+           (diseq (filter-not contains-fresh? diseq))
            (diseq (if (null? diseq) '() (list (cons '=/= diseq))))
            (types (walk* (map pretty-types (state-types st)) results))
-           (types (filter (lambda (t) (not (contains-fresh? (cdr t)))) types))
+           (types (filter-not contains-fresh? types))
            (cxs (append types diseq)))
       (if (null? cxs)
           walked-sub
@@ -168,7 +168,6 @@
   (if (pair? x)
       (or (contains-fresh? (car x)) (contains-fresh? (cdr x)))
       (var? x)))
-(define (fresh-var-diseq? =/=s) (not (ormap (lambda (=/=) (or (contains-fresh? (car =/=)) (contains-fresh? (cdr =/=)))) =/=s)))
 (define (pretty-diseq =/=s) (map (lambda (=/=) (list (car =/=) (cdr =/=))) =/=s))
 (define (pretty-types constraint) (list (type-check->sym (cdr constraint)) (car constraint)))
 
