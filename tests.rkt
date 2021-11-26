@@ -374,7 +374,7 @@
 
 (test 'fresh-test-6
   (run* (a b) (fresh (c) (=/= b c) (== c a)))
-  '(#s(Ans (_.0 _.1) ((=/= ((_.1 _.0)))))))
+  '(#s(Ans (_.0 _.1) ((=/= ((_.0 _.1)))))))
 
 (test 'appendo-1
   (run* (xs ys) (appendo xs ys '(a b c d)))
