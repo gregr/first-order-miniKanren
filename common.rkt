@@ -83,22 +83,39 @@
                                              (and st (unify (cdr u) (cdr v) st))))
       (else                                (and (eqv? u v) st)))))
 
-;; Disunification
-(define (disunify-helper sub newsub acc)
-  (if (eqv? sub newsub)
-      (reverse acc)
-      (disunify-helper sub (cdr newsub) (cons (car newsub) acc))))
+;; Type constraints
+(define (typify u type? st)
+  (let ((u (walk u (state-sub st))))
+    (if (var? u)
+        (let ((u-type (var-type-ref u (state-types st))))
+          (if u-type
+              (and (eqv? type? u-type) st)
+              (diseq-simplify (state (state-sub st)
+                                     (state-diseq st)
+                                     (extend-types u type? (state-types st))))))
+        (and (type? u) st))))
 
-(define (disunify u v st)
+;; Negation Constraints
+
+(define (unprocify-helper x newx acc)
+  (if (eqv? x newx)
+      (reverse acc)
+      (unprocify-helper x (cdr newx) (cons (car newx) acc))))
+
+(define (unprocify newst st)
   (let* ((sub (state-sub st))
-         (diseq (state-diseq st))
          (types (state-types st))
-         (unify-answer (unify u v st))
-         (newsub (and unify-answer (state-sub unify-answer))))
+         (diseq (state-diseq st))
+         (distypes #f) ; TODO
+         (newsub (and newst (state-sub newst)))
+         (newtypes (and newst (state-types newst))))
     (cond
-      ((not newsub) st)
-      ((eq? newsub sub) #f)
-      (else (state sub (extend-diseq (disunify-helper sub newsub '()) diseq) types)))))
+      ((not newsub) st)                                      ; CASE: proc always fails
+      ((and (eq? newsub sub) (eq? newtypes types)) #f)       ; CASE: proc always succeeds
+      (else (let* ((newdiseq (cond ((eq? newsub sub) diseq)  ; CASE: proc succeeds under new sub OR types
+                                   (else (extend-diseq (unprocify-helper sub newsub '()) diseq))))
+                   (newdistypes #f)) ; TODO distypes
+              (state sub newdiseq types #|newdistypes|#))))))
 
 (define (diseq-simplify st)
   (let* ((sub (state-sub st))
@@ -113,17 +130,10 @@
       (let ((new-acc (proc (car lst) acc)))
         (and new-acc (foldl/and proc new-acc (cdr lst))))))
 
-;; Type constraints
-(define (typify u type? st)
-  (let ((u (walk u (state-sub st))))
-    (if (var? u)
-        (let ((u-type (var-type-ref u (state-types st))))
-          (if u-type
-              (and (eqv? type? u-type) st)
-              (diseq-simplify (state (state-sub st)
-                                     (state-diseq st)
-                                     (extend-types u type? (state-types st))))))
-        (and (type? u) st))))
+;; Disunification
+
+(define (disunify u v st)
+  (unprocify (unify u v st) st))
 
 
 ;; Reification
