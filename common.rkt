@@ -9,6 +9,7 @@
   unify
   disunify
   typify
+  distypify
   walk*
   reify
   reify/initial-var)
@@ -141,6 +142,10 @@
 (define (disunify u v st)
   (disprocify (unify u v st) st 'sub))
 
+;; Distypification
+
+(define (distypify u type? st)
+  (disprocify (typify u type? st) st 'types))
 
 ;; Reification
 (struct Ans (term constraint) #:prefab)
