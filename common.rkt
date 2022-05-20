@@ -161,25 +161,27 @@
 (define (reify tm st)
   (define index -1)
   (let ((results (let loop ((tm tm) (st st))
-                   (define t (walk tm (state-sub st)))
-                   (cond ((pair? t) (loop (cdr t) (loop (car t) st)))
-                         ((var? t)  (set! index (+ 1 index))
+                   (define t (walk tm (state-sub st))) ;; applies subsitiution
+                   (cond ((pair? t) (loop (cdr t) (loop (car t) st))) ;; pair we loop through the first then use the new state to loop through second
+                         ((var? t)  (set! index (+ 1 index)) ;; increasese the index
                                     (state (extend-sub t (reified-index index) (state-sub st)) (state-diseq st) (state-types st) (state-distypes st)))
-                         (else      st)))))
-    (let* ((walked-sub (walk* tm results))
-           (diseq (map (lambda (=/=) (cons (length =/=) =/=)) (state-diseq st)))
-           (diseq (map cdr (sort diseq (lambda (x y) (< (car x) (car y))))))
-           (st (diseq-simplify (state (state-sub st) diseq (state-types st) (state-distypes st))))
-           (diseq (walk* (state-diseq st) results))
-           (diseq (map pretty-diseq (filter-not contains-fresh? diseq)))
-           (diseq (map (lambda (=/=) (sort =/= term<?)) diseq))
-           (diseq (if (null? diseq) '() (list (cons '=/= diseq))))
-           (types (walk* (map pretty-types (state-types st)) results))
-           (types (filter-not contains-fresh? types))
-           (cxs (append types diseq)))
-      (if (null? cxs)
-          walked-sub
-          (Ans walked-sub (sort cxs term<?))))))
+                                    ;; returns new state with stylised variable index set
+                         (else      st))))) ;; returns the state
+        ;; so results goes through and substitues all vars with reified index, and returns that new state
+    (let* ((walked-sub (walk* tm results)) ;; uses new state to walk through the term and subsitiute all vars with reified version
+           (diseq (map (lambda (=/=) (cons (length =/=) =/=)) (state-diseq st))) ;; appends length of diseq? (i can't find a way to make this not eq to 1)
+           (diseq (map cdr (sort diseq (lambda (x y) (< (car x) (car y)))))) ;; sort diseq by length, and remove length
+           (st (diseq-simplify (state (state-sub st) diseq (state-types st) (state-distypes st)))) ;; simplifies state using the new sorted diseq
+           (diseq (walk* (state-diseq st) results)) ;; reified walk the diseq
+           (diseq (map pretty-diseq (filter-not contains-fresh? diseq))) ;; yeets all diseq that contain a variable, and pretties them?
+           (diseq (map (lambda (=/=) (sort =/= term<?)) diseq)) ;; for all disequalities sort by term compairison
+           (diseq (if (null? diseq) '() (list (cons '=/= diseq)))) ;; if diseq is empty return empty list, else return diseq
+           (types (walk* (map pretty-types (state-types st)) results)) ;; now we pretty the types
+           (types (filter-not contains-fresh? types)) ;; removes all fresh
+           (cxs (append types diseq))) ;; creates final result
+      (if (null? cxs) ;; if null, no constraints?
+          walked-sub ;; return the walked term
+          (Ans walked-sub (sort cxs term<?)))))) ;; otherwise return sub followed by sorted constraints
 
 (define (reify/initial-var st)
   (reify initial-var st))
@@ -187,6 +189,8 @@
 (define (term<? u v)
   (eqv? (term-compare u v) -1))
 
+;; returns -1 if u < v, 0 if u = v, 1 if u > v
+;; used for pretty
 (define (term-compare u v)
   (cond
     ((eqv? u v) 0)
@@ -211,13 +215,20 @@
     ((pair? v) 1)
     (else 1)))
 
+;; checks to see if x contains any fresh statments
 (define (contains-fresh? x)
   (if (pair? x)
-      (or (contains-fresh? (car x)) (contains-fresh? (cdr x)))
-      (var? x)))
-(define (pretty-diseq =/=s) (map (lambda (=/=) (let ((x (car =/=)) (y (cdr =/=))) (if (term<? x y) (list x y) (list y x)))) =/=s))
+      (or (contains-fresh? (car x)) (contains-fresh? (cdr x))) ;; if a pair, check both sides
+      (var? x))) ;; if no pair then: if it's variable we must have a fresh otherwise we don't
+
+;; sorts by term compairison
+(define (pretty-diseq =/=s)
+  (map (lambda (=/=) (let ((x (car =/=)) (y (cdr =/=))) (if (term<? x y) (list x y) (list y x)))) =/=s))
+
+;; turns typed terms into pretty strings
 (define (pretty-types constraint) (list (type-check->sym (cdr constraint)) (car constraint)))
 
+;; returns string type for symbol, string, and number
 (define (type-check->sym pred)
   (cond
     ((eq? pred symbol?) 'sym)
