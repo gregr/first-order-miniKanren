@@ -187,7 +187,8 @@
            (diseq (if (null? diseq) '() (list (cons '=/= diseq)))) ;; if diseq is empty return empty list, else return diseq
            (types (walk* (map pretty-types (state-types st)) results)) ;; now we pretty the types
            (types (filter-not contains-fresh? types)) ;; removes all fresh
-           (cxs (append types diseq))) ;; creates final result
+           (distypes (state-distypes st)) ;; TODO: pretty the distypes
+           (cxs (append types diseq distypes))) ;; creates final result
       (if (null? cxs) ;; if null, no constraints?
           walked-sub ;; return the walked term
           (Ans walked-sub (sort cxs term<?)))))) ;; otherwise return sub followed by sorted constraints
