@@ -90,7 +90,8 @@
 
 ;; Type constraints
 (define (typify u type? st)
-  (let ((u (walk u (state-sub st))))
+  (let ((u (walk u (state-sub st)))
+        (type? (if (list? type?) (car type?) type?)))
     (if (var? u)
         (let ((u-type (var-type-ref u (state-types st))))
           (if u-type
