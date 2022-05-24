@@ -120,7 +120,7 @@
       ((and (eq? mode 'sub) (not (eq? newsub sub)))          ; CASE: proc succeeds under new sub
        (state sub (extend-diseq (disprocify-helper sub newsub '()) diseq) types distypes)) 
       ((and (eq? mode 'types) (not (eq? newtypes types)))    ; CASE: proc succeeds under new types
-       (state sub diseq types (extend-distypes (disprocify-helper types newtypes '()) distypes)))
+       (state sub diseq types (extend-distypes (car (disprocify-helper types newtypes '())) distypes)))
       (else #f))))                                           ; CASE: proc always succeeds
 
 (define (state-simplify st)
@@ -142,7 +142,7 @@
          (types (state-types st))
          (distypes (state-distypes st))
          (st (state sub diseq types empty-distypes)))
-    (foldl/and (lambda (!types st) (foldl/or (lambda (!type st) (distypify (car !type) (cdr !type) st)) st !types)) st distypes)))
+    (foldl/and (lambda (!type st) (distypify (car !type) (cdr !type) st)) st distypes)))
 
 (define (foldl/and proc acc lst)
   (if (null? lst)
@@ -242,7 +242,7 @@
       (or (contains-fresh? (car x)) (contains-fresh? (cdr x))) ;; if a pair, check both sides
       (var? x))) ;; if no pair then: if it's variable we must have a fresh otherwise we don't
 
-;; sorts by term compairison
+;; sorts by term comparison
 (define (pretty-diseq =/=s)
   (map (lambda (=/=) (let ((x (car =/=)) (y (cdr =/=))) (if (term<? x y) (list x y) (list y x)))) =/=s))
 
@@ -259,9 +259,7 @@
 
 ;; turns typed terms into pretty strings
 (define (pretty-distypes constraint)
-(let* 
-  ((constraint (car constraint)))
-  (list (distype-check->sym (cdr constraint)) (car constraint)))
+(list (distype-check->sym (cdr constraint)) (car constraint))
 )
 
 ;; returns string type for symbol, string, and number
