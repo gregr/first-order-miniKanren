@@ -74,7 +74,7 @@
     (and new-sub (let ((st (state new-sub (state-diseq st) types (state-distypes st))))
                    (if u-type
                        (typify u u-type st)
-                       (diseq-simplify st))))))
+                       (state-simplify st))))))
 
 (define (unify u v st)
   (let* ((sub (state-sub st))
@@ -90,14 +90,12 @@
 
 ;; Type constraints
 (define (typify u type? st)
-  (let* ((u (walk u (state-sub st)))
-        (type? (if (list? type?) (car type?) type?))
-        (u (if (list? u) (car u) u)))
+  (let ((u (walk u (state-sub st))))
     (if (var? u)
         (let ((u-type (var-type-ref u (state-types st))))
           (if u-type
               (and (eqv? type? u-type) st)
-              (diseq-simplify (state (state-sub st)
+              (state-simplify (state (state-sub st)
                                      (state-diseq st)
                                      (extend-types u type? (state-types st))
                                      (state-distypes st)))))
@@ -125,14 +123,18 @@
        (state sub diseq types (extend-distypes (disprocify-helper types newtypes '()) distypes)))
       (else #f))))                                           ; CASE: proc always succeeds
 
+(define (state-simplify st)
+  (let* ((st (and st (diseq-simplify st)))
+         (st (and st (distype-simplify st))))
+    st))
+
 (define (diseq-simplify st)
   (let* ((sub (state-sub st))
          (diseq (state-diseq st))
          (types (state-types st))
          (distypes (state-distypes st))
-         (st (state sub empty-diseq types distypes))
-         (st (foldl/and (lambda (=/=s st) (disunify (map car =/=s) (map cdr =/=s) st)) st diseq)))
-    (and st (distype-simplify st))))
+         (st (state sub empty-diseq types distypes)))
+    (foldl/and (lambda (=/=s st) (disunify (map car =/=s) (map cdr =/=s) st)) st diseq)))
 
 (define (distype-simplify st)
   (let* ((sub (state-sub st))
@@ -140,13 +142,19 @@
          (types (state-types st))
          (distypes (state-distypes st))
          (st (state sub diseq types empty-distypes)))
-    (foldl/and (lambda (distype st) (distypify (map car distype) (map cdr distype) st)) st distypes)))
+    (foldl/and (lambda (!types st) (foldl/or (lambda (!type st) (distypify (car !type) (cdr !type) st)) st !types)) st distypes)))
 
 (define (foldl/and proc acc lst)
   (if (null? lst)
       acc
       (let ((new-acc (proc (car lst) acc)))
         (and new-acc (foldl/and proc new-acc (cdr lst))))))
+
+(define (foldl/or proc acc lst)
+  (if (null? lst)
+      acc
+      (let ((new-acc (proc (car lst) acc)))
+        (or new-acc (foldl/and proc new-acc (cdr lst))))))
 
 ;; Disunification
 
@@ -169,7 +177,7 @@
 (define (reified-index index)
   (string->symbol
     (string-append "_." (number->string index))))
-; (define (reify tm st) st)
+;(define (reify tm st) st)
 (define (reify tm st)
   (define index -1)
   (let ((results (let loop ((tm tm) (st st))
@@ -183,7 +191,7 @@
     (let* ((walked-sub (walk* tm results)) ;; uses new state to walk through the term and subsitiute all vars with reified version
            (diseq (map (lambda (=/=) (cons (length =/=) =/=)) (state-diseq st))) ;; appends length of diseq? (i can't find a way to make this not eq to 1)
            (diseq (map cdr (sort diseq (lambda (x y) (< (car x) (car y)))))) ;; sort diseq by length, and remove length
-           (st (diseq-simplify (state (state-sub st) diseq (state-types st) (state-distypes st)))) ;; simplifies state using the new sorted diseq
+           (st (state-simplify (state (state-sub st) diseq (state-types st) (state-distypes st)))) ;; simplifies state using the new sorted diseq
            (diseq (walk* (state-diseq st) results)) ;; reified walk the diseq
            (diseq (map pretty-diseq (filter-not contains-fresh? diseq))) ;; yeets all diseq that contain a variable, and pretties them?
            (diseq (map (lambda (=/=) (sort =/= term<?)) diseq)) ;; for all disequalities sort by term compairison
