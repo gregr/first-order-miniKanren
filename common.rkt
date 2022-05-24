@@ -90,8 +90,9 @@
 
 ;; Type constraints
 (define (typify u type? st)
-  (let ((u (walk u (state-sub st)))
-        (type? (if (list? type?) (car type?) type?)))
+  (let* ((u (walk u (state-sub st)))
+        (type? (if (list? type?) (car type?) type?))
+        (u (if (list? u) (car u) u)))
     (if (var? u)
         (let ((u-type (var-type-ref u (state-types st))))
           (if u-type
@@ -168,6 +169,7 @@
 (define (reified-index index)
   (string->symbol
     (string-append "_." (number->string index))))
+; (define (reify tm st) st)
 (define (reify tm st)
   (define index -1)
   (let ((results (let loop ((tm tm) (st st))
@@ -187,8 +189,8 @@
            (diseq (map (lambda (=/=) (sort =/= term<?)) diseq)) ;; for all disequalities sort by term compairison
            (diseq (if (null? diseq) '() (list (cons '=/= diseq)))) ;; if diseq is empty return empty list, else return diseq
            (types (walk* (map pretty-types (state-types st)) results)) ;; now we pretty the types
+           (distypes (walk* (map pretty-distypes (state-distypes st)) results)) ;; now we pretty the types
            (types (filter-not contains-fresh? types)) ;; removes all fresh
-           (distypes (state-distypes st)) ;; TODO: pretty the distypes
            (cxs (append types diseq distypes))) ;; creates final result
       (if (null? cxs) ;; if null, no constraints?
           walked-sub ;; return the walked term
@@ -245,4 +247,19 @@
     ((eq? pred symbol?) 'sym)
     ((eq? pred string?) 'str)
     ((eq? pred number?) 'num)
+    (error "Invalid type")))
+
+;; turns typed terms into pretty strings
+(define (pretty-distypes constraint)
+(let* 
+  ((constraint (car constraint)))
+  (list (distype-check->sym (cdr constraint)) (car constraint)))
+)
+
+;; returns string type for symbol, string, and number
+(define (distype-check->sym pred)
+  (cond
+    ((eq? pred symbol?) '!sym)
+    ((eq? pred string?) '!str)
+    ((eq? pred number?) '!num)
     (error "Invalid type")))
