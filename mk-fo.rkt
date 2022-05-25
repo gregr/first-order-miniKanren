@@ -5,6 +5,9 @@
   symbolo
   numbero
   stringo
+  !symbolo
+  !numbero
+  !stringo
 
   define-relation
   fresh
