@@ -197,8 +197,9 @@
            (diseq (map (lambda (=/=) (sort =/= term<?)) diseq)) ;; for all disequalities sort by term compairison
            (diseq (if (null? diseq) '() (list (cons '=/= diseq)))) ;; if diseq is empty return empty list, else return diseq
            (types (walk* (map pretty-types (state-types st)) results)) ;; now we pretty the types
-           (distypes (walk* (map pretty-distypes (state-distypes st)) results)) ;; now we pretty the types
-           (types (filter-not contains-fresh? types)) ;; removes all fresh
+           (types (filter-not contains-fresh? types)) ;; removes all fresh from types
+           (distypes (walk* (map pretty-distypes (state-distypes st)) results)) ;; now we pretty the distypes
+           (distypes (filter-not contains-fresh? distypes)) ;; removes all fresh from distypes
            (cxs (append types diseq distypes))) ;; creates final result
       (if (null? cxs) ;; if null, no constraints?
           walked-sub ;; return the walked term
@@ -258,9 +259,7 @@
     (error "Invalid type")))
 
 ;; turns typed terms into pretty strings
-(define (pretty-distypes constraint)
-(list (distype-check->sym (cdr constraint)) (car constraint))
-)
+(define (pretty-distypes constraint) (list (distype-check->sym (cdr constraint)) (car constraint)))
 
 ;; returns string type for symbol, string, and number
 (define (distype-check->sym pred)
