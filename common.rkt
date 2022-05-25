@@ -103,12 +103,12 @@
 
 ;; Negation Constraints
 
-(define (extend-state/diff-helper x newx acc)
+(define (extend-state/negated-diff-helper x newx acc)
   (if (eqv? x newx)
       (reverse acc)
-      (extend-state/diff-helper x (cdr newx) (cons (car newx) acc))))
+      (extend-state/negated-diff-helper x (cdr newx) (cons (car newx) acc))))
 
-(define (extend-state/diff newst st mode)
+(define (extend-state/negated-diff newst st mode)
   (let* ((sub (state-sub st))
          (types (state-types st))
          (diseq (state-diseq st))
@@ -118,9 +118,9 @@
     (cond
       ((not newsub) st)
       ((and (eq? mode 'sub) (not (eq? newsub sub)))
-       (state sub (extend-diseq (extend-state/diff-helper sub newsub '()) diseq) types distypes)) 
+       (state sub (extend-diseq (extend-state/negated-diff-helper sub newsub '()) diseq) types distypes)) 
       ((and (eq? mode 'types) (not (eq? newtypes types)))
-       (state sub diseq types (extend-distypes (car (extend-state/diff-helper types newtypes '())) distypes)))
+       (state sub diseq types (extend-distypes (car (extend-state/negated-diff-helper types newtypes '())) distypes)))
       (else #f))))
 
 (define (state-simplify st)
@@ -159,12 +159,12 @@
 ;; Disunification
 
 (define (disunify u v st)
-  (extend-state/diff (unify u v st) st 'sub))
+  (extend-state/negated-diff (unify u v st) st 'sub))
 
 ;; Distypification
 
 (define (distypify u type? st)
-  (extend-state/diff (typify u type? st) st 'types))
+  (extend-state/negated-diff (typify u type? st) st 'types))
 
 ;; Reification
 (struct Ans (term constraint) #:prefab)
