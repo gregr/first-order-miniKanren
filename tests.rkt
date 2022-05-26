@@ -110,6 +110,7 @@
 (include "stringo-tests.rkt")
 (include "numbero-tests.rkt")
 (include "symbolo-numbero-tests.rkt")
+(include "distype-diseq-tests.rkt")
 
 (display "\nRunning remaining tests")
 (newline)
