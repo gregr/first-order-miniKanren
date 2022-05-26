@@ -102,11 +102,10 @@
         (and (type? u) st))))
 
 ;; Negation Constraints
-
-(define (extend-state/negated-diff-helper x newx acc)
+(define (diff-prefix x newx acc)
   (if (eqv? x newx)
       (reverse acc)
-      (extend-state/negated-diff-helper x (cdr newx) (cons (car newx) acc))))
+      (diff-prefix x (cdr newx) (cons (car newx) acc))))
 
 (define (extend-state/negated-diff newst st mode)
   (let* ((sub (state-sub st))
@@ -118,9 +117,15 @@
     (cond
       ((not newsub) st)
       ((and (eq? mode 'sub) (not (eq? newsub sub)))
-       (state sub (extend-diseq (extend-state/negated-diff-helper sub newsub '()) diseq) types distypes)) 
+       (state sub
+              (extend-diseq (diff-prefix sub newsub '()) diseq)
+              types
+              distypes)) 
       ((and (eq? mode 'types) (not (eq? newtypes types)))
-       (state sub diseq types (extend-distypes (car (extend-state/negated-diff-helper types newtypes '())) distypes)))
+       (state sub
+              diseq
+              types
+              (extend-distypes (car (diff-prefix types newtypes '())) distypes)))
       (else #f))))
 
 (define (state-simplify st)
@@ -150,19 +155,11 @@
       (let ((new-acc (proc (car lst) acc)))
         (and new-acc (foldl/and proc new-acc (cdr lst))))))
 
-(define (foldl/or proc acc lst)
-  (if (null? lst)
-      acc
-      (let ((new-acc (proc (car lst) acc)))
-        (or new-acc (foldl/and proc new-acc (cdr lst))))))
-
 ;; Disunification
-
 (define (disunify u v st)
   (extend-state/negated-diff (unify u v st) st 'sub))
 
 ;; Distypification
-
 (define (distypify u type? st)
   (extend-state/negated-diff (typify u type? st) st 'types))
 
@@ -174,36 +171,43 @@
     (if (pair? tm)
         `(,(walk* (car tm) st) .  ,(walk* (cdr tm) st))
         tm)))
+
 (define (reified-index index)
   (string->symbol
     (string-append "_." (number->string index))))
-;(define (reify tm st) st)
+
+;; stylizes output state
+;; 1. substitutes variables with stylized index 
+;; 2. simplifies state
+;; 3. removes unused fresh variables
+;; 4. stylizes rest of state
 (define (reify tm st)
   (define index -1)
   (let ((results (let loop ((tm tm) (st st))
-                   (define t (walk tm (state-sub st))) ;; applies subsitiution
-                   (cond ((pair? t) (loop (cdr t) (loop (car t) st))) ;; if pair we loop through the first then use the new state to loop through second
-                         ((var? t)  (set! index (+ 1 index)) ;; increasese the index
-                                    (state (extend-sub t (reified-index index) (state-sub st)) (state-diseq st) (state-types st) (state-distypes st)))
-                                    ;; returns new state with stylised variable index set
-                         (else      st))))) ;; returns the state
-        ;; so results goes through and substitues all vars with reified index, and returns that new state
-    (let* ((walked-sub (walk* tm results)) ;; uses new state to walk through the term and subsitiute all vars with reified version
-           (diseq (map (lambda (=/=) (cons (length =/=) =/=)) (state-diseq st))) ;; appends length of diseq conjuct to each diseq
-           (diseq (map cdr (sort diseq (lambda (x y) (< (car x) (car y)))))) ;; sort diseq by length, and remove length
-           (st (state-simplify (state (state-sub st) diseq (state-types st) (state-distypes st)))) ;; simplifies state using the new sorted diseq
-           (diseq (walk* (state-diseq st) results)) ;; reified walk the diseq
-           (diseq (map pretty-diseq (filter-not contains-fresh? diseq))) ;; removes all diseq that contain a fresh variable, and pretties the rest
-           (diseq (map (lambda (=/=) (sort =/= term<?)) diseq)) ;; order diseq by term comparison
-           (diseq (if (null? diseq) '() (list (cons '=/= diseq)))) ;; if diseq is empty return empty list, else return diseq prepended with =/=
-           (types (walk* (map pretty-types (state-types st)) results)) ;; now we pretty the types
-           (types (filter-not contains-fresh? types)) ;; removes all fresh variables from types
-           (distypes (walk* (map pretty-distypes (state-distypes st)) results)) ;; now we pretty the distypes
-           (distypes (filter-not contains-fresh? distypes)) ;; removes all fresh variables from distypes
-           (cxs (append types diseq distypes))) ;; creates final result
-      (if (null? cxs) ;; if null, no constraints
-          walked-sub ;; return the reification
-          (Ans walked-sub (sort cxs term<?)))))) ;; otherwise return reification followed by sorted constraints
+                   (define t (walk tm (state-sub st)))
+                   (cond ((pair? t) (loop (cdr t) (loop (car t) st)))
+                         ((var? t)  (set! index (+ 1 index))
+                                    (state (extend-sub t (reified-index index) (state-sub st))
+                                           (state-diseq st)
+                                           (state-types st)
+                                           (state-distypes st)))
+                         (else      st)))))
+    (let* ((walked-sub (walk* tm results))
+           (diseq (map (lambda (=/=) (cons (length =/=) =/=)) (state-diseq st)))
+           (diseq (map cdr (sort diseq (lambda (x y) (< (car x) (car y))))))
+           (st (state-simplify (state (state-sub st) diseq (state-types st) (state-distypes st))))
+           (diseq (walk* (state-diseq st) results))
+           (diseq (map pretty-diseq (filter-not contains-fresh? diseq)))
+           (diseq (map (lambda (=/=) (sort =/= term<?)) diseq))
+           (diseq (if (null? diseq) '() (list (cons '=/= diseq))))
+           (types (walk* (map pretty-types (state-types st)) results))
+           (types (filter-not contains-fresh? types))
+           (distypes (walk* (map pretty-distypes (state-distypes st)) results))
+           (distypes (filter-not contains-fresh? distypes))
+           (cxs (append types diseq distypes)))
+      (if (null? cxs)
+          walked-sub
+          (Ans walked-sub (sort cxs term<?))))))
 
 (define (reify/initial-var st)
   (reify initial-var st))
@@ -211,8 +215,8 @@
 (define (term<? u v)
   (eqv? (term-compare u v) -1))
 
-;; returns -1 if u < v, 0 if u = v, 1 if u > v
-;; used for pretty
+;; Returns -1 if u < v, 0 if u = v, 1 if u > v
+;; Used for stylization
 (define (term-compare u v)
   (cond
     ((eqv? u v) 0)
@@ -237,20 +241,18 @@
     ((pair? v) 1)
     (else 1)))
 
-;; checks to see if x contains any fresh statments
 (define (contains-fresh? x)
   (if (pair? x)
-      (or (contains-fresh? (car x)) (contains-fresh? (cdr x))) ;; if a pair, check both sides
-      (var? x))) ;; if no pair then: if it's variable we must have a fresh otherwise we don't
+      (or (contains-fresh? (car x)) (contains-fresh? (cdr x)))
+      (var? x)))
 
-;; sorts by term comparison
-(define (pretty-diseq =/=s)
-  (map (lambda (=/=) (let ((x (car =/=)) (y (cdr =/=))) (if (term<? x y) (list x y) (list y x)))) =/=s))
+(define (pretty-diseq =/=s) 
+  (map (lambda (=/=) (let ((x (car =/=)) (y (cdr =/=)))
+                     (if (term<? x y) (list x y) (list y x))))
+       =/=s))
 
-;; turns typed terms into pretty strings
 (define (pretty-types constraint) (list (type-check->sym (cdr constraint)) (car constraint)))
 
-;; returns string type for symbol, string, and number
 (define (type-check->sym pred)
   (cond
     ((eq? pred symbol?) 'sym)
@@ -258,10 +260,8 @@
     ((eq? pred number?) 'num)
     (error "Invalid type")))
 
-;; turns typed terms into pretty strings
 (define (pretty-distypes constraint) (list (distype-check->sym (cdr constraint)) (car constraint)))
 
-;; returns string type for symbol, string, and number
 (define (distype-check->sym pred)
   (cond
     ((eq? pred symbol?) 'not-sym)
