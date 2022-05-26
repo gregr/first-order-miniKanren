@@ -6,7 +6,7 @@
   '(#s(Ans (_.0) ((!sym _.0)))))
 
 (test '!symbolo-1
-  (run* (x) (!symbolo 1))
+  (run* (x) (!symbolo 'x))
   '())
 
 (test '!symbolo-2-a
