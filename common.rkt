@@ -182,28 +182,28 @@
   (define index -1)
   (let ((results (let loop ((tm tm) (st st))
                    (define t (walk tm (state-sub st))) ;; applies subsitiution
-                   (cond ((pair? t) (loop (cdr t) (loop (car t) st))) ;; pair we loop through the first then use the new state to loop through second
+                   (cond ((pair? t) (loop (cdr t) (loop (car t) st))) ;; if pair we loop through the first then use the new state to loop through second
                          ((var? t)  (set! index (+ 1 index)) ;; increasese the index
                                     (state (extend-sub t (reified-index index) (state-sub st)) (state-diseq st) (state-types st) (state-distypes st)))
                                     ;; returns new state with stylised variable index set
                          (else      st))))) ;; returns the state
         ;; so results goes through and substitues all vars with reified index, and returns that new state
     (let* ((walked-sub (walk* tm results)) ;; uses new state to walk through the term and subsitiute all vars with reified version
-           (diseq (map (lambda (=/=) (cons (length =/=) =/=)) (state-diseq st))) ;; appends length of diseq? (i can't find a way to make this not eq to 1)
+           (diseq (map (lambda (=/=) (cons (length =/=) =/=)) (state-diseq st))) ;; appends length of diseq conjuct to each diseq
            (diseq (map cdr (sort diseq (lambda (x y) (< (car x) (car y)))))) ;; sort diseq by length, and remove length
            (st (state-simplify (state (state-sub st) diseq (state-types st) (state-distypes st)))) ;; simplifies state using the new sorted diseq
            (diseq (walk* (state-diseq st) results)) ;; reified walk the diseq
-           (diseq (map pretty-diseq (filter-not contains-fresh? diseq))) ;; yeets all diseq that contain a variable, and pretties them?
-           (diseq (map (lambda (=/=) (sort =/= term<?)) diseq)) ;; for all disequalities sort by term compairison
-           (diseq (if (null? diseq) '() (list (cons '=/= diseq)))) ;; if diseq is empty return empty list, else return diseq
+           (diseq (map pretty-diseq (filter-not contains-fresh? diseq))) ;; removes all diseq that contain a fresh variable, and pretties the rest
+           (diseq (map (lambda (=/=) (sort =/= term<?)) diseq)) ;; order diseq by term comparison
+           (diseq (if (null? diseq) '() (list (cons '=/= diseq)))) ;; if diseq is empty return empty list, else return diseq prepended with =/=
            (types (walk* (map pretty-types (state-types st)) results)) ;; now we pretty the types
-           (types (filter-not contains-fresh? types)) ;; removes all fresh from types
+           (types (filter-not contains-fresh? types)) ;; removes all fresh variables from types
            (distypes (walk* (map pretty-distypes (state-distypes st)) results)) ;; now we pretty the distypes
-           (distypes (filter-not contains-fresh? distypes)) ;; removes all fresh from distypes
+           (distypes (filter-not contains-fresh? distypes)) ;; removes all fresh variables from distypes
            (cxs (append types diseq distypes))) ;; creates final result
-      (if (null? cxs) ;; if null, no constraints?
-          walked-sub ;; return the walked term
-          (Ans walked-sub (sort cxs term<?)))))) ;; otherwise return sub followed by sorted constraints
+      (if (null? cxs) ;; if null, no constraints
+          walked-sub ;; return the reification
+          (Ans walked-sub (sort cxs term<?)))))) ;; otherwise return reification followed by sorted constraints
 
 (define (reify/initial-var st)
   (reify initial-var st))
