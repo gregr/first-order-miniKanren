@@ -77,10 +77,125 @@
   (run* (x) (=/= x 5) (!stringo x))
   '(#s(Ans (_.0) ((!str _.0) (=/= ((_.0 5)))))))
 
-(test '!stringo-9
+(test '!stringo-9a
   (run* (x)
     (fresh (p q)
       (!stringo p)
       (!stringo q)
       (== `(,p ,q) x)))
   '(#s(Ans ((_.0 _.1)) ((!str _.0) (!str _.1)))))
+
+(test '!stringo-9b
+  (run* (x)
+    (fresh (p q)
+      (== `(,p ,q) x)
+      (!stringo p)
+      (!stringo q)))
+  '(#s(Ans ((_.0 _.1)) ((!str _.0) (!str _.1)))))
+
+(test '!stringo-10a
+  (run* (x)
+    (fresh (p q)
+      (!stringo p)
+      (!stringo p)
+      (== `(,p ,q) x)))
+  '(#s(Ans ((_.0 _.1)) ((!str _.0)))))
+
+(test '!stringo-10b
+  (run* (x)
+    (fresh (p q)
+      (== `(,p ,q) x)
+      (!stringo p)
+      (!stringo p)))
+  '(#s(Ans ((_.0 _.1)) ((!str _.0)))))
+
+(test '!stringo-10c
+  (run* (x)
+    (fresh (p q)
+      (!stringo p)
+      (== `(,p ,q) x)
+      (!stringo p)))
+  '(#s(Ans ((_.0 _.1)) ((!str _.0)))))
+
+(test '!stringo-11a
+  (run* (x)
+    (fresh (p q r s)
+      (=/= `(,p . ,q) `(,r . ,s))
+      (!stringo p)
+      (!stringo q)))
+  '((_.0)))
+
+(test '!stringo-11b
+  (run* (x)
+    (fresh (p q r s)
+      (=/= `(,p . ,q) `(,r . ,s))
+      (!stringo p)
+      (!stringo q)
+      (== `(,p ,q ,r ,s) x)))
+  '(#s(Ans ((_.0 _.1 _.2 _.3)) ((!str _.0) (!str _.1) (=/= ((_.0 _.2) (_.1 _.3)))))))
+
+(test '!stringo-11c
+  (run* (x)
+    (fresh (p q r s)
+      (=/= `(,p . ,q) `(,r . ,s))
+      (!stringo p)
+      (!stringo r)
+      (== `(,p ,q ,r ,s) x)))
+  '(#s(Ans ((_.0 _.1 _.2 _.3)) ((!str _.0) (!str _.2) (=/= ((_.0 _.2) (_.1 _.3)))))))
+
+(test '!stringo-11d
+  (run* (x)
+    (fresh (p q r s)
+      (=/= `(,p . ,q) `(,r . ,s))
+      (!stringo p)
+      (!stringo r)
+      (== p r)
+      (== `(,p ,q ,r ,s) x)))
+  '(#s(Ans ((_.0 _.1 _.0 _.2)) ((!str _.0) (=/= ((_.1 _.2)))))))
+
+(test '!stringo-12a
+  (run* (x)
+    (fresh (p q)
+      (=/= `(,p . ,q) `("hello" . "world"))
+      (== `(,p ,q) x)))
+  '(#s(Ans ((_.0 _.1)) ((=/= ((_.0 "hello") (_.1 "world")))))))
+
+(test '!stringo-12b
+  (run* (x)
+    (fresh (p q)
+      (=/= `(,p . ,q) `("hello" . "world"))
+      (!stringo p)
+      (== `(,p ,q) x)))
+  '(#s(Ans ((_.0 _.1)) ((!str _.0)))))
+
+(test '!stringo-12c
+  (run* (x)
+    (fresh (p q)
+      (!stringo p)
+      (=/= `(,p . ,q) `("hello" . "world"))
+      (== `(,p ,q) x)))
+  '(#s(Ans ((_.0 _.1)) ((!str _.0)))))
+
+(test '!stringo-12d
+  (run* (x)
+    (fresh (p q)
+      (!stringo p)
+      (=/= `("hello" . "world") `(,p . ,q))
+      (== `(,p ,q) x)))
+  '(#s(Ans ((_.0 _.1)) ((!str _.0)))))
+
+(test '!stringo-12e
+  (run* (x)
+    (fresh (p q)
+      (!stringo p)
+      (=/= `("hello" . ,q) `(,p . "world"))
+      (== `(,p ,q) x)))
+  '(#s(Ans ((_.0 _.1)) ((!str _.0)))))
+
+(test '!stringo-12f
+  (run* (x)
+    (fresh (p q)
+      (!stringo p)
+      (=/= `(727 . ,q) `(,p . "wysi"))
+      (== `(,p ,q) x)))
+  '(#s(Ans ((_.0 _.1)) ((!str _.0) (=/= ((_.0 727) (_.1 "wysi")))))))

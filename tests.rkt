@@ -111,6 +111,8 @@
 (include "numbero-tests.rkt")
 (include "symbolo-numbero-tests.rkt")
 (include "not-stringo-tests.rkt")
+(include "not-numbero-tests.rkt")
+(include "not-symbolo-tests.rkt")
 
 (display "\nRunning remaining tests")
 (newline)
