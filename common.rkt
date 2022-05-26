@@ -142,7 +142,7 @@
          (types (state-types st))
          (distypes (state-distypes st))
          (st (state sub diseq types empty-distypes)))
-    (foldl/and (lambda (!type st) (distypify (car !type) (cdr !type) st)) st distypes)))
+    (foldl/and (lambda (not-type st) (distypify (car not-type) (cdr not-type) st)) st distypes)))
 
 (define (foldl/and proc acc lst)
   (if (null? lst)
@@ -264,7 +264,7 @@
 ;; returns string type for symbol, string, and number
 (define (distype-check->sym pred)
   (cond
-    ((eq? pred symbol?) '!sym)
-    ((eq? pred string?) '!str)
-    ((eq? pred number?) '!num)
+    ((eq? pred symbol?) 'not-sym)
+    ((eq? pred string?) 'not-str)
+    ((eq? pred number?) 'not-num)
     (error "Invalid type")))
