@@ -199,3 +199,11 @@
       (=/= `("wysi" . ,q) `(,p . 727))
       (== `(,p ,q) x)))
   '(#s(Ans ((_.0 _.1)) ((=/= ((_.0 "wysi") (_.1 727))) (not-num _.0)))))
+
+(test 'not-numbero-13a
+  (run*(x) (not-numbero x) (conde ((numbero x)) ((== x "hello"))))
+  '(("hello")))
+
+(test 'not-numbero-13b
+  (run*(x) (not-numbero x) (conde ((== x 'x)) ((== x "hello"))))
+  '((x) ("hello")))

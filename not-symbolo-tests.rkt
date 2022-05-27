@@ -199,3 +199,11 @@
       (=/= `("q" . ,q) `(,p . 'p))
       (== `(,p ,q) x)))
   '(#s(Ans ((_.0 _.1)) ((=/= ((_.0 "q") (_.1 'p))) (not-sym _.0)))))
+
+(test 'not-symbolo-13a
+  (run*(x) (not-symbolo x) (conde ((symbolo x)) ((== x "hello"))))
+  '(("hello")))
+
+(test 'not-symbolo-13b
+  (run*(x) (not-symbolo x) (conde ((== x 13)) ((== x "hello"))))
+  '((13) ("hello")))

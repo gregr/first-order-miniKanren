@@ -33,9 +33,21 @@
   (run* (x) (fresh (p) (not-symbolo p) (== p 'p)))
   '())
 
-(test 'not-symbolo-not-numbero-5
+(test 'not-symbolo-not-numbero-5a
   (run* (x) (not-numbero x) (conde ((== x 3)) ((== x 'x))))
   '((x)))
+
+(test 'not-symbolo-not-numbero-5b
+  (run* (x) (not-numbero x) (conde ((numbero x)) ((== x 'x))))
+  '((x)))
+
+(test 'not-symbolo-not-numbero-5c
+  (run* (x) (not-numbero x) (conde ((numbero x)) ((not-symbolo x))))
+  '(#s(Ans (_.0) ((not-num _.0) (not-sym _.0)))))
+
+(test 'not-symbolo-not-numbero-5d
+  (run* (x) (not-numbero x) (conde ((not-symbolo x)) ((numbero x))))
+  '(#s(Ans (_.0) ((not-num _.0) (not-sym _.0)))))
 
 (test 'not-symbolo-not-numbero-6a
   (run* (x) (fresh (p) (not-symbolo x) (not-numbero p) (== p x)))
