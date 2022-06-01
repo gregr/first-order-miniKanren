@@ -108,4 +108,49 @@
 (test 'distype-diseq-19
   (run* (x) (fresh (a b c) (== x (list a b c)) (not-numbero a) (not-symbolo b) (not-stringo c) (=/= a "test") (=/= b 'a) (fresh (c2 c3) (== c (cons c2 c3)) (not-numbero c2) (not-symbolo c3))))
   '(#s(Ans ((_.0 _.1 (_.2 . _.3))) ((=/= ((_.0 "test"))) (not-num _.0) (not-num _.2) (not-sym _.1) (not-sym _.3))))
+)
 
+;; conjunction of disjunctions
+(test 'distype-diseq-20
+      (run* (x)
+            (conde ((not-stringo x)) ((not-numbero x)))
+            (conde ((== x "x")) ((== x 5))))
+      '((5) ("x")))
+
+(test 'distype-diseq-21
+      (run* (x)
+            (conde ((not-stringo x)) ((not-numbero x)))
+            (conde ((=/= x "x")) ((=/= x 5))))
+      '(#s(Ans (_.0) ((not-str _.0)))
+        #s(Ans (_.0) ((=/= ((_.0 5))) (not-str _.0)))
+        #s(Ans (_.0) ((=/= ((_.0 "x"))) (not-num _.0)))
+        #s(Ans (_.0) ((not-num _.0)))))
+
+(test 'distype-diseq-22
+      (run* (x)
+            (conde ((not-stringo x)) ((not-numbero x)))
+            (conde ((not-symbolo x)) ((numbero x))))
+      '(#s(Ans (_.0) ((not-str _.0) (not-sym _.0)))
+        #s(Ans (_.0) ((num _.0)))
+        #s(Ans (_.0) ((not-num _.0) (not-sym _.0)))))
+
+(test 'distype-diseq-23
+      (run* (x)
+            (conde ((not-stringo x)) ((not-numbero x)))
+            (conde ((not-symbolo x)) ((numbero x)))
+            (stringo x))
+      '(#s(Ans (_.0) ((str _.0)))))
+
+(test 'distype-diseq-24
+      (run* (x) (fresh (y)
+                       (conde ((not-numbero y)) ((not-stringo x)))
+                       (conde ((numbero y)) ((stringo x)))))
+      '(#s(Ans (_.0) ((not-str _.0)))
+        #s(Ans (_.0) ((str _.0)))))
+
+(test 'distype-diseq-25
+      (run* (x) (fresh (y)
+                       (conde ((== x 2)) ((== y 5)))
+                       (conde ((stringo y)) ((symbolo y)))))
+      '((2)
+        (2)))
