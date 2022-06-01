@@ -108,4 +108,4 @@
 (test 'distype-diseq-19
   (run* (x) (fresh (a b c) (== x (list a b c)) (not-numbero a) (not-symbolo b) (not-stringo c) (=/= a "test") (=/= b 'a) (fresh (c2 c3) (== c (cons c2 c3)) (not-numbero c2) (not-symbolo c3))))
   '(#s(Ans ((_.0 _.1 (_.2 . _.3))) ((=/= ((_.0 "test"))) (not-num _.0) (not-num _.2) (not-sym _.1) (not-sym _.3))))
-)
+

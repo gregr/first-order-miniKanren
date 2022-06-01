@@ -248,7 +248,7 @@
 
 (define (pretty-diseq =/=s) 
   (map (lambda (=/=) (let ((x (car =/=)) (y (cdr =/=)))
-                     (if (term<? x y) (list x y) (list y x))))
+                       (if (term<? x y) (list x y) (list y x))))
        =/=s))
 
 (define (pretty-types constraint) (list (type-check->sym (cdr constraint)) (car constraint)))
