@@ -126,7 +126,7 @@
         #s(Ans (_.0) ((=/= ((_.0 "x"))) (not-num _.0)))
         #s(Ans (_.0) ((not-num _.0)))))
 
-(test 'distype-diseq-22
+(test 'distype-diseq-22a
       (run* (x)
             (conde ((not-stringo x)) ((not-numbero x)))
             (conde ((not-symbolo x)) ((numbero x))))
@@ -134,12 +134,57 @@
         #s(Ans (_.0) ((num _.0)))
         #s(Ans (_.0) ((not-num _.0) (not-sym _.0)))))
 
-(test 'distype-diseq-23
+(test 'distype-diseq-22b
       (run* (x)
             (conde ((not-stringo x)) ((not-numbero x)))
             (conde ((not-symbolo x)) ((numbero x)))
             (stringo x))
       '(#s(Ans (_.0) ((str _.0)))))
+
+(test 'distype-diseq-22c
+      (run* (x)
+            (conde ((not-stringo x)) ((not-numbero x)) ((not-symbolo x)))
+            (conde ((not-symbolo x)) ((numbero x))))
+      '(#s(Ans (_.0) ((not-str _.0) (not-sym _.0)))
+        #s(Ans (_.0) ((num _.0)))
+        #s(Ans (_.0) ((not-num _.0) (not-sym _.0)))
+        #s(Ans (_.0) ((not-sym _.0)))
+        #s(Ans (_.0) ((num _.0)))))
+
+(test 'distype-diseq-22d
+      (run* (x)
+            (conde ((not-stringo x)) ((not-numbero x)) ((not-symbolo x)))
+            (conde ((not-symbolo x)) ((numbero x)))
+            (stringo x))
+      '(#s(Ans (_.0) ((str _.0)))
+        #s(Ans (_.0) ((str _.0)))))
+
+(test 'distype-diseq-23a
+      (run* (x) (conde ((not-numbero x) (== x 26))
+                       ((not-stringo x) (== x "x"))
+                       ((not-symbolo x) (== x 'x))))
+      '())
+
+(test 'distype-diseq-23b
+      (run* (x) (conde ((not-numbero x) (=/= x 26))
+                       ((not-stringo x) (== x "x"))
+                       ((not-symbolo x) (== x 'x))))
+      '(#s(Ans (_.0) ((not-num _.0)))))
+
+(test 'distype-diseq-23c
+      (run* (x) (conde ((not-numbero x) (=/= x 26))
+                       ((not-stringo x) (=/= x "x"))
+                       ((not-symbolo x) (== x 'x))))
+      '(#s(Ans (_.0) ((not-num _.0)))
+        #s(Ans (_.0) ((not-str _.0)))))
+
+(test 'distype-diseq-23d
+      (run* (x) (conde ((not-numbero x) (=/= x 26))
+                       ((not-stringo x) (=/= x "x"))
+                       ((not-symbolo x) (=/= x 'x))))
+      '(#s(Ans (_.0) ((not-num _.0)))
+        #s(Ans (_.0) ((not-str _.0)))
+        #s(Ans (_.0) ((not-sym _.0)))))
 
 (test 'distype-diseq-24
       (run* (x) (fresh (y)
