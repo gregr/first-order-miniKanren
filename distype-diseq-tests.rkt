@@ -265,3 +265,55 @@
         (2)
         (1)
         (1)))
+
+(test 'distype-diseq-27
+      (run* (x) (fresh (y)
+                       (conde ((not-stringo y)) ((not-numbero x)))
+                       (conde ((== y 'z)) ((== y 27)))
+                       (=/= x y)))
+      '(#s(Ans (_.0) ((=/= ((_.0 z)))))
+        #s(Ans (_.0) ((=/= ((_.0 z))) (not-num _.0)))
+        #s(Ans (_.0) ((=/= ((_.0 27)))))
+        #s(Ans (_.0) ((not-num _.0)))))
+
+(test 'distype-diseq-28a
+      (run* (x y)
+            (=/= x y)
+            (not-stringo x)
+            (stringo y))
+      '(#s(Ans (_.0 _.1) ((not-str _.0) (str _.1)))))
+
+(test 'distype-diseq-28b
+      (run* (x y)
+            (not-stringo x)
+            (=/= x y)
+            (stringo y))
+      '(#s(Ans (_.0 _.1) ((not-str _.0) (str _.1)))))
+
+(test 'distype-diseq-28c
+      (run* (x y)
+            (not-stringo x)
+            (stringo y)
+            (=/= x y))
+      '(#s(Ans (_.0 _.1) ((not-str _.0) (str _.1)))))
+
+(test 'distype-diseq-28d
+      (run* (x y)
+            (=/= x y)
+            (== x 5)
+            (stringo y))
+      '(#s(Ans (_.0 _.1) ((not-str _.0) (str _.1)))))
+
+(test 'distype-diseq-28e
+      (run* (x y)
+            (== x 5)
+            (=/= x y)
+            (stringo y))
+      '(#s(Ans (_.0 _.1) ((not-str _.0) (str _.1)))))
+
+(test 'distype-diseq-28f
+      (run* (x y)
+            (== x 5)
+            (stringo y)
+            (=/= x y))
+      '(#s(Ans (_.0 _.1) ((not-str _.0) (str _.1)))))
