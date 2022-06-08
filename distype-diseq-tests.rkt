@@ -302,18 +302,18 @@
             (=/= x y)
             (== x 5)
             (stringo y))
-      '(#s(Ans (_.0 _.1) ((not-str _.0) (str _.1)))))
+      '(#s(Ans (5 _.0) ((str _.0)))))
 
 (test 'distype-diseq-28e
       (run* (x y)
             (== x 5)
             (=/= x y)
             (stringo y))
-      '(#s(Ans (_.0 _.1) ((not-str _.0) (str _.1)))))
+      '(#s(Ans (5 _.0) ((str _.0)))))
 
 (test 'distype-diseq-28f
       (run* (x y)
             (== x 5)
             (stringo y)
             (=/= x y))
-      '(#s(Ans (_.0 _.1) ((not-str _.0) (str _.1)))))
+      '(#s(Ans (5 _.0) ((str _.0)))))
