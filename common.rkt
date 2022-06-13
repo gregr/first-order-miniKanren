@@ -9,6 +9,7 @@
   unify
   disunify
   typify
+  distypify
   walk*
   reify
   reify/initial-var)
@@ -27,6 +28,7 @@
 (define empty-sub '())
 (define empty-diseq '())
 (define empty-types '())
+(define empty-distypes '())
 
 (define (walk t sub)
   (let ((xt (and (var? t) (assf (lambda (x) (var=? t x)) sub))))
@@ -51,11 +53,14 @@
 (define (extend-types x t types)
   `((,x . ,t) . ,types))
 
+(define (extend-distypes distype distypes)
+  (cons distype distypes))
+
 (define (var-type-remove t types)
   (remove t types (lambda (v type-constraint) (eq? v (car type-constraint)))))
 
-(struct state (sub diseq types) #:prefab)
-(define empty-state (state empty-sub empty-diseq empty-types))
+(struct state (sub diseq types distypes) #:prefab)
+(define empty-state (state empty-sub empty-diseq empty-types empty-distypes))
 
 (define (state->stream state)
   (if state (cons state #f) #f))
@@ -66,10 +71,10 @@
          (u-type (var-type-ref u types))
          (types (if u-type (var-type-remove u types) types))
          (new-sub (extend-sub u v (state-sub st))))
-    (and new-sub (let ((st (state new-sub (state-diseq st) types)))
+    (and new-sub (let ((st (state new-sub (state-diseq st) types (state-distypes st))))
                    (if u-type
                        (typify u u-type st)
-                       (diseq-simplify st))))))
+                       (state-simplify st))))))
 
 (define (unify u v st)
   (let* ((sub (state-sub st))
@@ -83,36 +88,6 @@
                                              (and st (unify (cdr u) (cdr v) st))))
       (else                                (and (eqv? u v) st)))))
 
-;; Disunification
-(define (disunify-helper sub newsub acc)
-  (if (eqv? sub newsub)
-      (reverse acc)
-      (disunify-helper sub (cdr newsub) (cons (car newsub) acc))))
-
-(define (disunify u v st)
-  (let* ((sub (state-sub st))
-         (diseq (state-diseq st))
-         (types (state-types st))
-         (unify-answer (unify u v st))
-         (newsub (and unify-answer (state-sub unify-answer))))
-    (cond
-      ((not newsub) st)
-      ((eq? newsub sub) #f)
-      (else (state sub (extend-diseq (disunify-helper sub newsub '()) diseq) types)))))
-
-(define (diseq-simplify st)
-  (let* ((sub (state-sub st))
-         (diseq (state-diseq st))
-         (types (state-types st))
-         (st (state sub empty-diseq types)))
-    (foldl/and (lambda (=/=s st) (disunify (map car =/=s) (map cdr =/=s) st)) st diseq)))
-
-(define (foldl/and proc acc lst)
-  (if (null? lst)
-      acc
-      (let ((new-acc (proc (car lst) acc)))
-        (and new-acc (foldl/and proc new-acc (cdr lst))))))
-
 ;; Type constraints
 (define (typify u type? st)
   (let ((u (walk u (state-sub st))))
@@ -120,11 +95,73 @@
         (let ((u-type (var-type-ref u (state-types st))))
           (if u-type
               (and (eqv? type? u-type) st)
-              (diseq-simplify (state (state-sub st)
+              (state-simplify (state (state-sub st)
                                      (state-diseq st)
-                                     (extend-types u type? (state-types st))))))
+                                     (extend-types u type? (state-types st))
+                                     (state-distypes st)))))
         (and (type? u) st))))
 
+;; Negation Constraints
+(define (diff-prefix x newx acc)
+  (if (eqv? x newx)
+      (reverse acc)
+      (diff-prefix x (cdr newx) (cons (car newx) acc))))
+
+(define (extend-state/negated-diff newst st mode)
+  (let* ((sub (state-sub st))
+         (types (state-types st))
+         (diseq (state-diseq st))
+         (distypes (state-distypes st))
+         (newsub (and newst (state-sub newst)))
+         (newtypes (and newst (state-types newst))))
+    (cond
+      ((not newsub) st)
+      ((and (eq? mode 'sub) (not (eq? newsub sub)))
+       (state sub
+              (extend-diseq (diff-prefix sub newsub '()) diseq)
+              types
+              distypes)) 
+      ((and (eq? mode 'types) (not (eq? newtypes types)))
+       (state sub
+              diseq
+              types
+              (extend-distypes (car (diff-prefix types newtypes '())) distypes)))
+      (else #f))))
+
+(define (state-simplify st)
+  (let* ((st (and st (diseq-simplify st)))
+         (st (and st (distype-simplify st))))
+    st))
+
+(define (diseq-simplify st)
+  (let* ((sub (state-sub st))
+         (diseq (state-diseq st))
+         (types (state-types st))
+         (distypes (state-distypes st))
+         (st (state sub empty-diseq types distypes)))
+    (foldl/and (lambda (=/=s st) (disunify (map car =/=s) (map cdr =/=s) st)) st diseq)))
+
+(define (distype-simplify st)
+  (let* ((sub (state-sub st))
+         (diseq (state-diseq st))
+         (types (state-types st))
+         (distypes (state-distypes st))
+         (st (state sub diseq types empty-distypes)))
+    (foldl/and (lambda (not-type st) (distypify (car not-type) (cdr not-type) st)) st distypes)))
+
+(define (foldl/and proc acc lst)
+  (if (null? lst)
+      acc
+      (let ((new-acc (proc (car lst) acc)))
+        (and new-acc (foldl/and proc new-acc (cdr lst))))))
+
+;; Disunification
+(define (disunify u v st)
+  (extend-state/negated-diff (unify u v st) st 'sub))
+
+;; Distypification
+(define (distypify u type? st)
+  (extend-state/negated-diff (typify u type? st) st 'types))
 
 ;; Reification
 (struct Ans (term constraint) #:prefab)
@@ -134,28 +171,40 @@
     (if (pair? tm)
         `(,(walk* (car tm) st) .  ,(walk* (cdr tm) st))
         tm)))
+
 (define (reified-index index)
   (string->symbol
     (string-append "_." (number->string index))))
+
+;; stylizes output state
+;; 1. substitutes variables with stylized index 
+;; 2. simplifies state
+;; 3. removes unused fresh variables
+;; 4. stylizes rest of state
 (define (reify tm st)
   (define index -1)
   (let ((results (let loop ((tm tm) (st st))
                    (define t (walk tm (state-sub st)))
                    (cond ((pair? t) (loop (cdr t) (loop (car t) st)))
                          ((var? t)  (set! index (+ 1 index))
-                                    (state (extend-sub t (reified-index index) (state-sub st)) (state-diseq st) (state-types st)))
+                                    (state (extend-sub t (reified-index index) (state-sub st))
+                                           (state-diseq st)
+                                           (state-types st)
+                                           (state-distypes st)))
                          (else      st)))))
     (let* ((walked-sub (walk* tm results))
            (diseq (map (lambda (=/=) (cons (length =/=) =/=)) (state-diseq st)))
            (diseq (map cdr (sort diseq (lambda (x y) (< (car x) (car y))))))
-           (st (diseq-simplify (state (state-sub st) diseq (state-types st))))
+           (st (state-simplify (state (state-sub st) diseq (state-types st) (state-distypes st))))
            (diseq (walk* (state-diseq st) results))
            (diseq (map pretty-diseq (filter-not contains-fresh? diseq)))
            (diseq (map (lambda (=/=) (sort =/= term<?)) diseq))
            (diseq (if (null? diseq) '() (list (cons '=/= diseq))))
            (types (walk* (map pretty-types (state-types st)) results))
            (types (filter-not contains-fresh? types))
-           (cxs (append types diseq)))
+           (distypes (walk* (map pretty-distypes (state-distypes st)) results))
+           (distypes (filter-not contains-fresh? distypes))
+           (cxs (append types diseq distypes)))
       (if (null? cxs)
           walked-sub
           (Ans walked-sub (sort cxs term<?))))))
@@ -166,6 +215,8 @@
 (define (term<? u v)
   (eqv? (term-compare u v) -1))
 
+;; Returns -1 if u < v, 0 if u = v, 1 if u > v
+;; Used for stylization
 (define (term-compare u v)
   (cond
     ((eqv? u v) 0)
@@ -194,7 +245,12 @@
   (if (pair? x)
       (or (contains-fresh? (car x)) (contains-fresh? (cdr x)))
       (var? x)))
-(define (pretty-diseq =/=s) (map (lambda (=/=) (let ((x (car =/=)) (y (cdr =/=))) (if (term<? x y) (list x y) (list y x)))) =/=s))
+
+(define (pretty-diseq =/=s) 
+  (map (lambda (=/=) (let ((x (car =/=)) (y (cdr =/=)))
+                       (if (term<? x y) (list x y) (list y x))))
+       =/=s))
+
 (define (pretty-types constraint) (list (type-check->sym (cdr constraint)) (car constraint)))
 
 (define (type-check->sym pred)
@@ -202,4 +258,13 @@
     ((eq? pred symbol?) 'sym)
     ((eq? pred string?) 'str)
     ((eq? pred number?) 'num)
+    (error "Invalid type")))
+
+(define (pretty-distypes constraint) (list (distype-check->sym (cdr constraint)) (car constraint)))
+
+(define (distype-check->sym pred)
+  (cond
+    ((eq? pred symbol?) 'not-sym)
+    ((eq? pred string?) 'not-str)
+    ((eq? pred number?) 'not-num)
     (error "Invalid type")))
