@@ -269,7 +269,7 @@
                 (printf (string-append "\n" margin "Choice ~s:\n") (+ i 1))
                 (print-choice s))
               (range (length choices)) choices)
-    (printf "\n[h]elp, [u]ndo, or choice number> ")
+    (printf "\n[h]elp, [u]ndo, or choice number> \n")
     (define (invalid)
       (displayln "\nInvalid command or choice number.\nHit enter to continue.")
       (read-line) (read-line)
