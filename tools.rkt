@@ -19,10 +19,12 @@
  stream-take/step
  run/step
  run*/step
+ step
 
  explore/stream
  explore)
 
+(require "microk-fo.rkt")
 (require "mk-fo.rkt")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
