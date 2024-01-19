@@ -1,27 +1,27 @@
 #lang racket
 (provide
-  (all-from-out "mk-fo.rkt")
-  prune/stream
-  prune/goal
-  dnf/stream
-  dnf/goal
+ (all-from-out "mk-fo.rkt")
+ prune/stream
+ prune/goal
+ dnf/stream
+ dnf/goal
 
-  strip/stream
-  strip/state
-  pretty/state
-  pretty/stream
-  pretty/goal
+ strip/stream
+ strip/state
+ pretty/state
+ pretty/stream
+ pretty/goal
 
-  parallel-step-simple
-  parallel-step
+ parallel-step-simple
+ parallel-step
 
-  mature/step
-  stream-take/step
-  run/step
-  run*/step
+ mature/step
+ stream-take/step
+ run/step
+ run*/step
 
-  explore/stream
-  explore)
+ explore/stream
+ explore)
 
 (require "mk-fo.rkt")
 
@@ -166,7 +166,7 @@
      (let ((s (if (mature? s) s (parallel-step-simple s))))
        (cond ((not s)   #f)
              ((pair? s) (parallel-step-simple (mplus (pause (car s) g)
-                                              (bind (cdr s) g)))
+                                                     (bind (cdr s) g)))
 
                         )
              (else      (bind s (parallel-expand g))))))
@@ -183,14 +183,14 @@
   (if (mature? s) s (mature/step step (step s))))
 (define (stream-take/step step n s)
   (if (eqv? 0 n) '()
-    (let ((s (mature/step step s)))
-      (if (pair? s)
-        (cons (car s) (stream-take/step step (and n (- n 1)) (cdr s)))
-        '()))))
+      (let ((s (mature/step step s)))
+        (if (pair? s)
+            (cons (car s) (stream-take/step step (and n (- n 1)) (cdr s)))
+            '()))))
 (define-syntax run/step
   (syntax-rules ()
     ((_ step n body ...) (map reify/initial-var (stream-take/step
-                                                  step n (query body ...))))))
+                                                 step n (query body ...))))))
 (define-syntax run*/step
   (syntax-rules () ((_ step body ...) (run/step step #f body ...))))
 
@@ -228,8 +228,8 @@
     (define (qv-prefix qv) (string-append " " (symbol->string qv) " = "))
     (define qv-prefixes (and qvars (map qv-prefix qvars)))
     (if qv-prefixes
-      (for-each (lambda (prefix v) (pp prefix v)) qv-prefixes vs)
-      (for-each (lambda (v) (pp " " v)) vs)))
+        (for-each (lambda (prefix v) (pp prefix v)) qv-prefixes vs)
+        (for-each (lambda (v) (pp " " v)) vs)))
   (define (print-choice s)
     (match s
       ((pause st g)
@@ -261,10 +261,10 @@
       (newline))
     (printf "Current Depth: ~a\n" (length undo))
     (if (= 0 (length choices))
-      (if (= (length results) 0)
-        (printf "Choice FAILED!  Undo to continue.\n")
-        (printf "No more choices available.  Undo to continue.\n"))
-      (printf "Number of Choices: ~a\n" (length choices)))
+        (if (= (length results) 0)
+            (printf "Choice FAILED!  Undo to continue.\n")
+            (printf "No more choices available.  Undo to continue.\n"))
+        (printf "Number of Choices: ~a\n" (length choices)))
     (for-each (lambda (i s)
                 (printf (string-append "\n" margin "Choice ~s:\n") (+ i 1))
                 (print-choice s))
@@ -278,9 +278,9 @@
     (cond ((eof-object? i) (newline))
           ((or (eq? i 'h) (eq? i 'help))
            (displayln
-             (string-append "\nType either the letter 'u' or the"
-                            " number following one of the listed choices."
-                            "\nHit enter to continue."))
+            (string-append "\nType either the letter 'u' or the"
+                           " number following one of the listed choices."
+                           "\nHit enter to continue."))
            (read-line) (read-line)
            (loop s undo))
           ((and (or (eq? i 'u) (eq? i 'undo)) (pair? undo))
