@@ -51,7 +51,7 @@
     (s             s)))
 
 (define (prune/goal st g)
-  (define (prune/term t) (walk* t (state-sub st)))
+  (define (prune/term t) (walk* t st))
   (match g
     ((disj g1 g2)
      (match (prune/goal st g1)
@@ -71,7 +71,8 @@
      (let ((t1 (prune/term t1)) (t2 (prune/term t2)))
        (match (unify t1 t2 st)
          (#f          #f)
-         (`(,st . #f) (pause st (== t1 t2))))))))
+         (`(,st . #f) (pause st (== t1 t2)))
+         (st          (pause st (== t1 t2))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Transform into Disjunctive Normal Form.
@@ -117,7 +118,7 @@
     ((mplus s1 s2) (mplus (strip/stream s1) (strip/stream s2)))
     ((bind s g)    (bind  (strip/stream s)  g))
     ((pause st g)  (pause (strip/state st)  g))
-    (`(,st . ,s)   `(,(strip/state st) . (strip/stream s)))
+    (`(,st . ,s)   `(,(strip/state st) . ,(strip/stream s)))
     (#f            #f)))
 
 (define (strip/state st)
@@ -195,7 +196,6 @@
                                                  step n (query body ...))))))
 (define-syntax run*/step
   (syntax-rules () ((_ step body ...) (run/step step #f body ...))))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Interactive query exploration

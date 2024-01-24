@@ -167,7 +167,7 @@
 (struct Ans (term constraint) #:prefab)
 
 (define (walk* tm st)
-  (let* ((sub (state-sub st)) (tm (walk tm sub)))
+  (let* ((sub (if (state? st) (state-sub st) st)) (tm (walk tm sub)))
     (if (pair? tm)
         `(,(walk* (car tm) st) .  ,(walk* (cdr tm) st))
         tm)))
