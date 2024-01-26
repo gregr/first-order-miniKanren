@@ -17,6 +17,7 @@
 
  mature/step
  stream-take/step
+ run/step-simplify
  run/step
  run*/step
  step
@@ -196,6 +197,13 @@
         (if (pair? s)
             (cons (car s) (stream-take/step step (and n (- n 1)) (cdr s)))
             '()))))
+
+(define (simplify s)
+  (prune/stream (dnf/stream s)))
+(define-syntax run/step-simplify
+  (syntax-rules ()
+    ((_ step n body ...) (map reify/initial-var (stream-take/step
+                                                 (lambda (s) (simplify (step s))) n (simplify (query body ...)))))))
 (define-syntax run/step
   (syntax-rules ()
     ((_ step n body ...) (map reify/initial-var (stream-take/step
