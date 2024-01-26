@@ -227,6 +227,7 @@
   (match g
     ((conj g1 g2) (append (goal->constraints st g1) (goal->constraints st g2)))
     ((relate _ d) (list (walked-term (cdr d) st)))
+    ((=/= t1 t2)  `(,(list '=/= (walked-term t1 st) (walked-term t2 st))))
     (_            '())))  ;; == information has already been added to st.
 
 (define (explore/stream step qvars s)
