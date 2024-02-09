@@ -72,13 +72,11 @@
      (let ((t1 (prune/term t1)) (t2 (prune/term t2)))
        (match (unify t1 t2 st)
          (#f          #f)
-         (`(,st . #f) (pause st (== t1 t2)))
          (st          (pause st (== t1 t2))))))
     ((=/= t1 t2)
      (let ((t1 (prune/term t1)) (t2 (prune/term t2)))
        (match (disunify t1 t2 st)
          (#f          #f)
-         (`(,st . #f) (pause st (=/= t1 t2)))
          (st          (pause st (=/= t1 t2))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
