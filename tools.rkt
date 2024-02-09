@@ -52,7 +52,7 @@
     (s             s)))
 
 (define (prune/goal st g)
-  (define (prune/term t) (walk* t st))
+  (define (prune/term t) (walk* t (state-sub st)))
   (match g
     ((disj g1 g2)
      (match (prune/goal st g1)
