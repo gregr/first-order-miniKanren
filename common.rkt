@@ -1,18 +1,18 @@
 #lang racket
 (provide
-  (struct-out var)
-  initial-var
-  var/fresh
-  (struct-out state)
-  empty-state
-  state->stream
-  unify
-  disunify
-  typify
-  distypify
-  walk*
-  reify
-  reify/initial-var)
+ (struct-out var)
+ initial-var
+ var/fresh
+ (struct-out state)
+ empty-state
+ state->stream
+ unify
+ disunify
+ typify
+ distypify
+ walk*
+ reify
+ reify/initial-var)
 
 ;; Logic variables
 (struct var (name index) #:prefab)
@@ -41,8 +41,8 @@
         (else      #f)))
 
 (define (var-type-ref t types)
-    (let* ((xt (assf (lambda (x) (var=? t x)) types)))
-      (and xt (cdr xt))))
+  (let* ((xt (assf (lambda (x) (var=? t x)) types)))
+    (and xt (cdr xt))))
 
 (define (extend-sub x t sub)
   (and (not (occurs? x t sub)) `((,x . ,t) . ,sub)))
@@ -120,7 +120,7 @@
        (state sub
               (extend-diseq (diff-prefix sub newsub '()) diseq)
               types
-              distypes)) 
+              distypes))
       ((and (eq? mode 'types) (not (eq? newtypes types)))
        (state sub
               diseq
@@ -166,18 +166,18 @@
 ;; Reification
 (struct Ans (term constraint) #:prefab)
 
-(define (walk* tm st)
-  (let* ((sub (state-sub st)) (tm (walk tm sub)))
+(define (walk* tm sub)
+  (let* ((tm (walk tm sub)))
     (if (pair? tm)
-        `(,(walk* (car tm) st) .  ,(walk* (cdr tm) st))
+        `(,(walk* (car tm) sub) .  ,(walk* (cdr tm) sub))
         tm)))
 
 (define (reified-index index)
   (string->symbol
-    (string-append "_." (number->string index))))
+   (string-append "_." (number->string index))))
 
 ;; stylizes output state
-;; 1. substitutes variables with stylized index 
+;; 1. substitutes variables with stylized index
 ;; 2. simplifies state
 ;; 3. removes unused fresh variables
 ;; 4. stylizes rest of state
@@ -192,17 +192,17 @@
                                            (state-types st)
                                            (state-distypes st)))
                          (else      st)))))
-    (let* ((walked-sub (walk* tm results))
+    (let* ((walked-sub (walk* tm (state-sub results)))
            (diseq (map (lambda (=/=) (cons (length =/=) =/=)) (state-diseq st)))
            (diseq (map cdr (sort diseq (lambda (x y) (< (car x) (car y))))))
            (st (state-simplify (state (state-sub st) diseq (state-types st) (state-distypes st))))
-           (diseq (walk* (state-diseq st) results))
+           (diseq (walk* (state-diseq st) (state-sub results)))
            (diseq (map pretty-diseq (filter-not contains-fresh? diseq)))
            (diseq (map (lambda (=/=) (sort =/= term<?)) diseq))
            (diseq (if (null? diseq) '() (list (cons '=/= diseq))))
-           (types (walk* (map pretty-types (state-types st)) results))
+           (types (walk* (map pretty-types (state-types st)) (state-sub results)))
            (types (filter-not contains-fresh? types))
-           (distypes (walk* (map pretty-distypes (state-distypes st)) results))
+           (distypes (walk* (map pretty-distypes (state-distypes st)) (state-sub results)))
            (distypes (filter-not contains-fresh? distypes))
            (cxs (append types diseq distypes)))
       (if (null? cxs)
@@ -232,7 +232,7 @@
     ((number? v) 1)
     ((string? u) (if (string? v) (if (string<? u v) -1 (if (string=? u v) 0 1)) -1))
     ((string? v) 1)
-    ((pair? u) (if (pair? v) 
+    ((pair? u) (if (pair? v)
                    (let ((compared-cars (term-compare (car u) (car v))))
                      (if (eqv? compared-cars 0)
                          (term-compare (cdr u) (cdr v))
@@ -246,7 +246,7 @@
       (or (contains-fresh? (car x)) (contains-fresh? (cdr x)))
       (var? x)))
 
-(define (pretty-diseq =/=s) 
+(define (pretty-diseq =/=s)
   (map (lambda (=/=) (let ((x (car =/=)) (y (cdr =/=)))
                        (if (term<? x y) (list x y) (list y x))))
        =/=s))
