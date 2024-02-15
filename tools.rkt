@@ -320,6 +320,8 @@
 ;; when exploring
 (struct explore-state (history choices results) #:prefab)
 (define (explore-state/can-undo? exp-state) (pair? (explore-state->history exp-state)))
+(define (explore-state/undo exp-state)
+  (cdar (explore-state->history exp-state)))
 (define (explore-state/make-choice exp-state choice)
   (match (exp-state)
     [(explore-state history _ _)
@@ -327,6 +329,7 @@
             [expanded-choices (stream->choices expnded-stream)]
             [choices (dropf expanded-choices state?)]
             [results (takef expanded-choices state?)])
+       ; NOTE: could store history as just a pointer to previous choice instead of list
        (explore-state (cons exp-state history) choices results)]))
 (define (explore-state/make-choices exp-state choices)
   (match choices
@@ -384,7 +387,7 @@
          (read-line)
          (read-line)
          (loop exp-state)]
-        [(and (or (eq? i 'u) (eq? i 'undo)) (pair? undo))
+        [(and (or (eq? i 'u) (eq? i 'undo)) (explore-state/can-undo? exp-state))
          (loop (explore-state/undo exp-state))]
         [(and (integer? i) (<= 1 i) (<= i (length (explore-state->choices exp-state))))
          (loop (explore-state/make-choice exp-state (- i 1)))]
