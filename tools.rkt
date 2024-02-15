@@ -230,49 +230,59 @@
 (define (walked-term t st) (walk* t (state-sub st)))
 
 (define (goal->constraints st g)
+  ; takes a state and a goal and returns a list of Constraints
+  ; which are just printable representations of goals
   (match g
     ((conj g1 g2) (append (goal->constraints st g1) (goal->constraints st g2)))
     ((relate _ d) (list (walked-term (cdr d) st)))
     ((=/= t1 t2)  `(,(list '=/= (walked-term t1 st) (walked-term t2 st))))
     (_            '())))  ;; == information has already been added to st.
 
+(define margin "| ") ; define margin
+(define (pp prefix v) (pprint/margin margin prefix v)) ; pretty-print with margin
+(define (pp/qvars qvars vs) ; pretty-print the query variables
+  (define (qv-prefix qv) (string-append " " (symbol->string qv) " = "))
+  (define qv-prefixes (and qvars (map qv-prefix qvars)))
+  (if qv-prefixes
+      (for-each (lambda (prefix v) (pp prefix v)) qv-prefixes vs)
+      (for-each (lambda (v) (pp " " v)) vs)))
+(define (print-choice qvars s) ; Print the variables and constraints of a choice
+  (match s
+    ((pause st g)
+      (pp/qvars qvars (walked-term initial-var st)) ; Print query variables
+      (define cxs (walked-term (goal->constraints st g) st))
+      (unless (null? cxs)
+        (displayln (string-append margin " Constraints:"))
+        (for-each (lambda (v) (pp " * " v)) cxs))
+      (when (null? cxs)
+        (displayln (string-append margin " No constraints"))))))
+
+(define (previous-choice undo)
+  ; undo -- current state of the program
+  (and (pair? undo)
+        (let* ((i.s (car undo)) (i (car i.s)) (s (cdr i.s)))
+          (list-ref (dropf s state?) (- i 1)))))
+
 (define (explore/stream step qvars s)
-  (define margin "| ")
-  (define (pp prefix v) (pprint/margin margin prefix v))
-  (define (pp/qvars vs)
-    (define (qv-prefix qv) (string-append " " (symbol->string qv) " = "))
-    (define qv-prefixes (and qvars (map qv-prefix qvars)))
-    (if qv-prefixes
-        (for-each (lambda (prefix v) (pp prefix v)) qv-prefixes vs)
-        (for-each (lambda (v) (pp " " v)) vs)))
-  (define (print-choice s)
-    (match s
-      ((pause st g)
-       (pp/qvars (walked-term initial-var st))
-       (define cxs (walked-term (goal->constraints st g) st))
-       (unless (null? cxs)
-         (displayln (string-append margin " Constraints:"))
-         (for-each (lambda (v) (pp " * " v)) cxs))
-       (when (null? cxs)
-         (displayln (string-append margin " No constraints"))))))
-  (let loop ((s (stream->choices s)) (undo '()))
-    (define previous-choice
-      (and (pair? undo)
-           (let* ((i.s (car undo)) (i (car i.s)) (s (cdr i.s)))
-             (list-ref (dropf s state?) (- i 1)))))
+  ; step -- a procedure that takes a stream and returns a new stream
+  ; qvars -- a list of query variables
+  ; s -- a query
+  (let loop ((s (stream->choices s)) ;; s is a list of choices
+            (undo '())) ;; undo is a list of (depth . choice/result) pairs
     (define results (takef s state?))
     (define choices (dropf s state?))
+    (printf "\n~s\n" s)
     (display "\n========================================")
     (displayln "========================================")
     (unless (= (length results) 0)
       (printf "Number of results: ~a\n" (length results))
       (for-each (lambda (st)
-                  (pp/qvars (walked-term initial-var st))
+                  (pp/qvars qvars (walked-term initial-var st))
                   (newline))
                 results))
-    (when (and previous-choice (null? results))
+    (when (and (previous-choice undo) (null? results))
       (printf "Previous Choice:\n")
-      (print-choice previous-choice)
+      (print-choice qvars (previous-choice undo))
       (newline))
     (printf "Current Depth: ~a\n" (length undo))
     (if (= 0 (length choices))
@@ -282,7 +292,7 @@
         (printf "Number of Choices: ~a\n" (length choices)))
     (for-each (lambda (i s)
                 (printf (string-append "\n" margin "Choice ~s:\n") (+ i 1))
-                (print-choice s))
+                (print-choice qvars s))
               (range (length choices)) choices)
     (printf "\n[h]elp, [u]ndo, or choice number> \n")
     (define (invalid)
@@ -304,6 +314,82 @@
            (loop (stream->choices (step (list-ref choices (- i 1))))
                  (cons (cons i s) undo)))
           (else (invalid)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Define explore state to maintain the data held at every step
+;; when exploring
+(struct explore-state (history choices results) #:prefab)
+(define (explore-state/can-undo? exp-state) (pair? (explore-state->history exp-state)))
+(define (explore-state/make-choice exp-state choice)
+  (match (exp-state)
+    [(explore-state history _ _)
+     (let* ([expanded-stream (step (list-ref choices choice))]
+            [expanded-choices (stream->choices expnded-stream)]
+            [choices (dropf expanded-choices state?)]
+            [results (takef expanded-choices state?)])
+       (explore-state (cons exp-state history) choices results)]))
+(define (explore-state/make-choices exp-state choices)
+  (match choices
+    ['() exp-state]
+    [(cons c hoices)
+     (explore-state/make-choices (explore-state/make-choice exp-state c) hoices)]))
+
+(define (pp/results qvars results)
+  (unless (= (length results) 0)
+    (printf "Number of results: ~a\n" (length results))
+    (for-each (lambda (st)
+                (pp/qvars qvars (walked-term initial-var st))
+                (newline))
+              results)))
+(define (pp/choices qvars choices)
+  (if (= 0 (length choices))
+    (printf "No more choices available. Undo to continue.\n")
+    (printf "Number of Choices: ~a\n" (length choices))))
+    (for-each (lambda (i s)
+                (printf (string-append "\n" margin "Choice ~s:\n") (+ i 1))
+                (print-choice qvars s))
+              (range (length choices)) choices)
+(define (pp/explore-state exp-state qvars)
+  (match exp-state
+    [(explore-state history choices results)
+     (display "\n========================================")
+     (displayln "========================================")
+     (pp/results qvars results)
+     (when (and (previous-choice undo) (null? results))
+       (printf "Previous Choice:\n")
+       (print-choice qvars (previous-choice undo))
+       (newline))
+     (printf "Current Depth: ~a\n" (length undo))
+     (pp/choices qvars choices)
+     (printf "\n[h]elp, [u]ndo, or choice number> \n")
+     ]))
+
+(define (explore-state/stream step qvars strm)
+  (let* ([s (stream->choices strm)]
+         [choices (dropf s state?)]
+         [results (takef s state?)])
+    (let loop ((exp-state (explore-state '() choices results)))
+      (pp/explore-state exp-state)
+      (define (invalid)
+        (displayln "\nInvalid command or choice number.")
+        (loop exp-state))
+      (define i (read))
+      (cond
+        [(eof-object? i) (newline)]
+        [(or (eq? i 'h) (eq? i 'help))
+         (displayln
+            (string-append "\nType either the letter 'u' or the"
+                           " number following one of the listed choices."
+                           "\nHit enter to continue."))
+         (read-line)
+         (read-line)
+         (loop exp-state)]
+        [(and (or (eq? i 'u) (eq? i 'undo)) (pair? undo))
+         (loop (explore-state/undo exp-state))]
+        [(and (integer? i) (<= 1 i) (<= i (length (explore-state->choices exp-state))))
+         (loop (explore-state/make-choice exp-state (- i 1)))]
+        [else (invalid)]
+        ))))
 
 (define-syntax explore
   (syntax-rules (query)
