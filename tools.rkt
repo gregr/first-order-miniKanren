@@ -361,7 +361,6 @@
        (newline))
      (printf "Current Depth: ~a\n" (length undo))
      (pp/choices qvars choices)
-     (printf "\n[h]elp, [u]ndo, or choice number> \n")
      ]))
 
 (define (explore-state/stream step qvars strm)
@@ -373,6 +372,7 @@
       (define (invalid)
         (displayln "\nInvalid command or choice number.")
         (loop exp-state))
+      (printf "\n[h]elp, [u]ndo, or choice number> \n")
       (define i (read))
       (cond
         [(eof-object? i) (newline)]
