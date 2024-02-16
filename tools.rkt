@@ -238,37 +238,36 @@
     ((=/= t1 t2)  `(,(list '=/= (walked-term t1 st) (walked-term t2 st))))
     (_            '())))  ;; == information has already been added to st.
 
-(define margin "| ") ; define margin
-(define (pp prefix v) (pprint/margin margin prefix v)) ; pretty-print with margin
-(define (pp/qvars qvars vs) ; pretty-print the query variables
-  (define (qv-prefix qv) (string-append " " (symbol->string qv) " = "))
-  (define qv-prefixes (and qvars (map qv-prefix qvars)))
-  (if qv-prefixes
-      (for-each (lambda (prefix v) (pp prefix v)) qv-prefixes vs)
-      (for-each (lambda (v) (pp " " v)) vs)))
-(define (print-choice qvars s) ; Print the variables and constraints of a choice
-  (match s
-    ((pause st g)
-      (pp/qvars qvars (walked-term initial-var st)) ; Print query variables
-      (define cxs (walked-term (goal->constraints st g) st))
-      (unless (null? cxs)
-        (displayln (string-append margin " Constraints:"))
-        (for-each (lambda (v) (pp " * " v)) cxs))
-      (when (null? cxs)
-        (displayln (string-append margin " No constraints"))))))
-
-(define (previous-choice undo)
-  ; undo -- current state of the program
-  (and (pair? undo)
-        (let* ((i.s (car undo)) (i (car i.s)) (s (cdr i.s)))
-          (list-ref (dropf s state?) (- i 1)))))
-
 (define (explore/stream step qvars s)
   ; step -- a procedure that takes a stream and returns a new stream
   ; qvars -- a list of query variables
   ; s -- a query
+  (define margin "| ") ; define margin
+  (define (pp prefix v) (pprint/margin margin prefix v)) ; pretty-print with margin
+  (define (pp/qvars vs) ; pretty-print the query variables
+    (define (qv-prefix qv) (string-append " " (symbol->string qv) " = "))
+    (define qv-prefixes (and qvars (map qv-prefix qvars)))
+    (if qv-prefixes
+        (for-each (lambda (prefix v) (pp prefix v)) qv-prefixes vs)
+        (for-each (lambda (v) (pp " " v)) vs)))
+  (define (print-choice s) ; Print the variables and constraints of a choice
+    (match s
+      ((pause st g)
+        (pp/qvars qvars (walked-term initial-var st)) ; Print query variables
+        (define cxs (walked-term (goal->constraints st g) st))
+        (unless (null? cxs)
+          (displayln (string-append margin " Constraints:"))
+          (for-each (lambda (v) (pp " * " v)) cxs))
+        (when (null? cxs)
+          (displayln (string-append margin " No constraints"))))))
+
   (let loop ((s (stream->choices s)) ;; s is a list of choices
             (undo '())) ;; undo is a list of (depth . choice/result) pairs
+    (define (previous-choice undo)
+      ; undo -- current state of the program
+      (and (pair? undo)
+            (let* ((i.s (car undo)) (i (car i.s)) (s (cdr i.s)))
+              (list-ref (dropf s state?) (- i 1)))))
     (define results (takef s state?))
     (define choices (dropf s state?))
     (printf "\n~s\n" s)
@@ -277,7 +276,7 @@
     (unless (= (length results) 0)
       (printf "Number of results: ~a\n" (length results))
       (for-each (lambda (st)
-                  (pp/qvars qvars (walked-term initial-var st))
+                  (pp/qvars (walked-term initial-var st))
                   (newline))
                 results))
     (when (and (previous-choice undo) (null? results))
@@ -292,7 +291,7 @@
         (printf "Number of Choices: ~a\n" (length choices)))
     (for-each (lambda (i s)
                 (printf (string-append "\n" margin "Choice ~s:\n") (+ i 1))
-                (print-choice qvars s))
+                (print-choice s))
               (range (length choices)) choices)
     (printf "\n[h]elp, [u]ndo, or choice number> \n")
     (define (invalid)
