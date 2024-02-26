@@ -21,6 +21,9 @@
  run/step
  run*/step
  step
+ 
+ drive/policy
+ drive/tree
 
  explore/stream
  explore)
@@ -253,7 +256,7 @@
   (define (print-choice s) ; Print the variables and constraints of a choice
     (match s
       ((pause st g)
-        (pp/qvars qvars (walked-term initial-var st)) ; Print query variables
+        (pp/qvars (walked-term initial-var st)) ; Print query variables
         (define cxs (walked-term (goal->constraints st g) st))
         (unless (null? cxs)
           (displayln (string-append margin " Constraints:"))
@@ -263,6 +266,7 @@
 
   (let loop ((s (stream->choices s)) ;; s is a list of choices
             (undo '())) ;; undo is a list of (depth . choice/result) pairs
+    (printf "\nState: ~s\n" s)
     (define (previous-choice undo)
       ; undo -- current state of the program
       (and (pair? undo)
@@ -270,7 +274,6 @@
               (list-ref (dropf s state?) (- i 1)))))
     (define results (takef s state?))
     (define choices (dropf s state?))
-    (printf "\n~s\n" s)
     (display "\n========================================")
     (displayln "========================================")
     (unless (= (length results) 0)
@@ -281,7 +284,7 @@
                 results))
     (when (and (previous-choice undo) (null? results))
       (printf "Previous Choice:\n")
-      (print-choice qvars (previous-choice undo))
+      (print-choice (previous-choice undo))
       (newline))
     (printf "Current Depth: ~a\n" (length undo))
     (if (= 0 (length choices))
@@ -317,83 +320,108 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Define explore state to maintain the data held at every step
 ;; when exploring
-(struct explore-state (history choices results) #:prefab)
-(define (explore-state/can-undo? exp-state) (pair? (explore-state->history exp-state)))
-(define (explore-state/undo exp-state)
-  (cdar (explore-state->history exp-state)))
-(define (explore-state/make-choice exp-state choice)
-  (match (exp-state)
-    [(explore-state history _ _)
-     (let* ([expanded-stream (step (list-ref choices choice))]
-            [expanded-choices (stream->choices expnded-stream)]
-            [choices (dropf expanded-choices state?)]
-            [results (takef expanded-choices state?)])
-       ; NOTE: could store history as just a pointer to previous choice instead of list
-       (explore-state (cons exp-state history) choices results)]))
-(define (explore-state/make-choices exp-state choices)
-  (match choices
-    ['() exp-state]
-    [(cons c hoices)
-     (explore-state/make-choices (explore-state/make-choice exp-state c) hoices)]))
+;; https://wiki.haskell.org/Zipper
+(struct explore-context (index siblings choices context) #:prefab)
+(struct explore-node (index choices expanded-choices) #:prefab)
+;;       a
+;;    /--|--\
+;;   b   c   d
+;;  / \
+;; e   @
+;; would be modeled as (@ as current context):
+;; (1 '(e) (0 '(c d) (-1 '(a) 'top)))
+(struct explore-loc (tree context) #:prefab)
+(define explore-top 'X-TOP)
+(define (init-explore query)
+  (let ([choices (stream->choices query)])
+    (printf "Initial choices: ~s\n" choices)
+    (explore-loc (explore-node -1 choices '()) explore-top)))
 
-(define (pp/results results qvars)
-  (unless (= (length results) 0)
-    (printf "Number of results: ~a\n" (length results))
-    (for-each (lambda (st)
-                (pp/qvars qvars (walked-term initial-var st))
-                (newline))
-              results)))
-(define (pp/choices choices qvars)
+(define (expand-choice choices i)
+  (explore-node i (stream->choices (step (list-ref choices i))) '()))
+
+;; tree manipulation
+(define (explore-choice exp-loc choice)
+  (match exp-loc
+    [(explore-loc (explore-node i chs xchs) context)
+     (let*-values ([(x-ind) (index-where xchs (lambda (xn) (= choice (explore-node-index xn))))]
+                   [(xc hes) (if (not x-ind) (values '() xchs) (split-at xchs x-ind))]
+                   [(expanded-node) (if x-ind (list-ref xchs x-ind) (expand-choice chs choice))]
+                   [(expanded-context) (explore-context choice (append xc hes) chs context)])
+       (explore-loc expanded-node expanded-context))]))
+(define (explore-undo exp-loc)
+  (match exp-loc
+    [(explore-loc tree (explore-context i siblings ch ctx))
+     (explore-loc (explore-node i ch (cons tree siblings)) ctx)]
+    [(explore-loc t 'X-TOP) (explore-loc t 'X-TOP)]))
+
+;; pretty-print functions
+(define (pp/qvars qvars vs)
+  (define (qv-prefix qv) (string-append " " (symbol->string qv) " = "))
+  (define qv-prefixes (and qvars (map qv-prefix qvars)))
+  (if qv-prefixes
+      (for-each (lambda (prefix v) (pprint/margin "" prefix v)) qv-prefixes vs)
+      (for-each (lambda (v) (pprint/margin "" " " v)) vs)))
+(define (pprint-choice s qvars) ; Print the variables and constraints of a choice
+  (match s
+    [(pause st g)
+      (pp/qvars qvars (walked-term initial-var st)) ; Print query variables
+      (define cxs (walked-term (goal->constraints st g) st))
+      (unless (null? cxs)
+        (displayln "Constraints:")
+        (for-each (lambda (v) (pprint/margin "" " * " v)) cxs))
+      (when (null? cxs)
+        (displayln "No constraints")
+        (newline))]
+    [st (displayln "Result: ")
+        (pp/qvars qvars (walked-term initial-var st))]))
+(define (pprint-choices choices qvars)
   (if (= 0 (length choices))
     (printf "No more choices available. Undo to continue.\n")
-    (printf "Number of Choices: ~a\n" (length choices))))
+    (printf "Number of Choices: ~a\n" (length choices)))
     (for-each (lambda (i s)
-                (printf (string-append "\n" margin "Choice ~s:\n") (+ i 1))
-                (print-choice qvars s))
-              (range (length choices)) choices)
-(define (pp/explore-state exp-state qvars)
-  (match exp-state
-    [(explore-state history choices results)
-     (display "\n========================================")
-     (displayln "========================================")
-     (pp/results results qvars)
-     (when (and (previous-choice undo) (null? results))
-       (printf "Previous Choice:\n")
-       (print-choice qvars (previous-choice undo))
-       (newline))
-     (printf "Current Depth: ~a\n" (length undo))
-     (pp/choices choices qvars)
-     ]))
+                (printf (string-append "\nChoice ~s:\n") (+ i 1))
+                (pprint-choice s qvars))
+              (range (length choices)) choices))
 
-(define (explore-state/stream step qvars strm)
-  (let* ([s (stream->choices strm)]
-         [choices (dropf s state?)]
-         [results (takef s state?)])
-    (let loop ((exp-state (explore-state '() choices results)))
-      (pp/explore-state exp-state qvars)
-      (define (invalid)
-        (displayln "\nInvalid command or choice number.\nHit enter to continue.")
-        (read-line)
-        (read-line)
-        (loop exp-state))
-      (printf "\n[h]elp, [u]ndo, or choice number> \n")
-      (define i (read))
-      (cond
-        [(eof-object? i) (newline)]
-        [(or (eq? i 'h) (eq? i 'help))
-         (displayln
-            (string-append "\nType either the letter 'u' or the"
-                           " number following one of the listed choices."
-                           "\nHit enter to continue."))
-         (read-line)
-         (read-line)
-         (loop exp-state)]
-        [(and (or (eq? i 'u) (eq? i 'undo)) (explore-state/can-undo? exp-state))
-         (loop (explore-state/undo exp-state))]
-        [(and (integer? i) (<= 1 i) (<= i (length (explore-state->choices exp-state))))
-         (loop (explore-state/make-choice exp-state (- i 1)))]
-        [else (invalid)]
-        ))))
+;; policy-print, policy-read, policy-done?
+(define (pp/explore-tree exp-loc qvars)
+  (define tree (explore-loc-tree exp-loc))
+  #| (printf "Tree: ~s\n" tree) |#
+  #| (printf "Context: ~s\n" (explore-loc-context exp-loc)) |#
+  (pprint-choices (explore-node-choices tree) qvars))
+(define (explore-tree-input exp-loc qvars)
+  (define tree (explore-loc-tree exp-loc))
+  (printf "\n[u]ndo, or choice number> \n")
+  (define i (read))
+  (cond
+    [(and (integer? i) (<= 1 i) (<= i (length (explore-node-choices tree))))
+      (explore-choice exp-loc (- i 1))]
+    [(or (eq? i 'u) (eq? i 'undo)) (explore-undo exp-loc)]
+    [else
+      (displayln "\nInvalid command or choice number.")
+      (explore-tree-input exp-loc qvars)]))
+(define (explore-tree-finished? exp-loc)
+  (exact-nonnegative-integer? (index-where
+                                (explore-node-choices (explore-loc-tree exp-loc))
+                                (lambda (x) (state? x)))))
+
+(define (drive/policy step qvars policy-print policy-read policy-done? init-state)
+  (let loop ([s init-state])
+    (policy-print s qvars)
+    (unless (policy-done? s)
+      (loop (policy-read s qvars)))))
+
+(define-syntax drive/tree
+  (syntax-rules (query)
+    [(_ step (query (qvars ...) body ...))
+     (drive/policy
+       step
+       '(qvars ...) 
+       pp/explore-tree
+       explore-tree-input
+       explore-tree-finished? 
+       (init-explore (query (qvars ...) body ...)))]))
 
 (define-syntax explore
   (syntax-rules (query)
