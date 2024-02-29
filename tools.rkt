@@ -233,8 +233,6 @@
 (define (walked-term t st) (walk* t (state-sub st)))
 
 (define (goal->constraints st g)
-  ; takes a state and a goal and returns a list of Constraints
-  ; which are just printable representations of goals
   (match g
     ((conj g1 g2) (append (goal->constraints st g1) (goal->constraints st g2)))
     ((relate _ d) (list (walked-term (cdr d) st)))
@@ -242,18 +240,15 @@
     (_            '())))  ;; == information has already been added to st.
 
 (define (explore/stream step qvars s)
-  ; step -- a procedure that takes a stream and returns a new stream
-  ; qvars -- a list of query variables
-  ; s -- a query
-  (define margin "| ") ; define margin
-  (define (pp prefix v) (pprint/margin margin prefix v)) ; pretty-print with margin
-  (define (pp/qvars vs) ; pretty-print the query variables
+  (define margin "| ")
+  (define (pp prefix v) (pprint/margin margin prefix v))
+  (define (pp/qvars vs)
     (define (qv-prefix qv) (string-append " " (symbol->string qv) " = "))
     (define qv-prefixes (and qvars (map qv-prefix qvars)))
     (if qv-prefixes
         (for-each (lambda (prefix v) (pp prefix v)) qv-prefixes vs)
         (for-each (lambda (v) (pp " " v)) vs)))
-  (define (print-choice s) ; Print the variables and constraints of a choice
+  (define (print-choice s)
     (match s
       ((pause st g)
         (pp/qvars (walked-term initial-var st)) ; Print query variables
@@ -264,14 +259,13 @@
         (when (null? cxs)
           (displayln (string-append margin " No constraints"))))))
 
-  (let loop ((s (stream->choices s)) ;; s is a list of choices
-            (undo '())) ;; undo is a list of (depth . choice/result) pairs
+  (let loop ((s (stream->choices s))
+            (undo '()))
     (printf "\nState: ~s\n" s)
-    (define (previous-choice undo)
-      ; undo -- current state of the program
+    (define previous-choice
       (and (pair? undo)
-            (let* ((i.s (car undo)) (i (car i.s)) (s (cdr i.s)))
-              (list-ref (dropf s state?) (- i 1)))))
+           (let* ((i.s (car undo)) (i (car i.s)) (s (cdr i.s)))
+             (list-ref (dropf s state?) (- i 1)))))
     (define results (takef s state?))
     (define choices (dropf s state?))
     (display "\n========================================")
@@ -282,9 +276,9 @@
                   (pp/qvars (walked-term initial-var st))
                   (newline))
                 results))
-    (when (and (previous-choice undo) (null? results))
+    (when (and previous-choice (null? results))
       (printf "Previous Choice:\n")
-      (print-choice (previous-choice undo))
+      (print-choice previous-choice)
       (newline))
     (printf "Current Depth: ~a\n" (length undo))
     (if (= 0 (length choices))
@@ -321,7 +315,7 @@
 ;; Define explore state to maintain the data held at every step
 ;; when exploring
 ;; https://wiki.haskell.org/Zipper
-(struct explore-context (index siblings choices context) #:prefab)
+(struct explore-parent-context (index siblings choices context) #:prefab)
 (struct explore-node (index choices expanded-choices) #:prefab)
 ;;       a
 ;;    /--|--\
@@ -337,21 +331,21 @@
     (printf "Initial choices: ~s\n" choices)
     (explore-loc (explore-node -1 choices '()) explore-top)))
 
-(define (expand-choice choices i)
+(define (expand-choice choices step i)
   (explore-node i (stream->choices (step (list-ref choices i))) '()))
 
 ;; tree manipulation
-(define (explore-choice exp-loc choice)
+(define (explore-choice exp-loc step choice)
   (match exp-loc
     [(explore-loc (explore-node i chs xchs) context)
      (let*-values ([(x-ind) (index-where xchs (lambda (xn) (= choice (explore-node-index xn))))]
                    [(xc hes) (if (not x-ind) (values '() xchs) (split-at xchs x-ind))]
-                   [(expanded-node) (if x-ind (list-ref xchs x-ind) (expand-choice chs choice))]
-                   [(expanded-context) (explore-context choice (append xc hes) chs context)])
+                   [(expanded-node) (if x-ind (list-ref xchs x-ind) (expand-choice chs step choice))]
+                   [(expanded-context) (explore-parent-context choice (append xc hes) chs context)])
        (explore-loc expanded-node expanded-context))]))
 (define (explore-undo exp-loc)
   (match exp-loc
-    [(explore-loc tree (explore-context i siblings ch ctx))
+    [(explore-loc tree (explore-parent-context i siblings ch ctx))
      (explore-loc (explore-node i ch (cons tree siblings)) ctx)]
     [(explore-loc t 'X-TOP) (explore-loc t 'X-TOP)]))
 
@@ -390,17 +384,17 @@
   #| (printf "Tree: ~s\n" tree) |#
   #| (printf "Context: ~s\n" (explore-loc-context exp-loc)) |#
   (pprint-choices (explore-node-choices tree) qvars))
-(define (explore-tree-input exp-loc qvars)
+(define (explore-tree-input exp-loc step qvars)
   (define tree (explore-loc-tree exp-loc))
   (printf "\n[u]ndo, or choice number> \n")
   (define i (read))
   (cond
     [(and (integer? i) (<= 1 i) (<= i (length (explore-node-choices tree))))
-      (explore-choice exp-loc (- i 1))]
+      (explore-choice exp-loc step (- i 1))]
     [(or (eq? i 'u) (eq? i 'undo)) (explore-undo exp-loc)]
     [else
       (displayln "\nInvalid command or choice number.")
-      (explore-tree-input exp-loc qvars)]))
+      (explore-tree-input exp-loc step qvars)]))
 (define (explore-tree-finished? exp-loc)
   (exact-nonnegative-integer? (index-where
                                 (explore-node-choices (explore-loc-tree exp-loc))
@@ -410,7 +404,7 @@
   (let loop ([s init-state])
     (policy-print s qvars)
     (unless (policy-done? s)
-      (loop (policy-read s qvars)))))
+      (loop (policy-read s step qvars)))))
 
 (define-syntax drive/tree
   (syntax-rules (query)
