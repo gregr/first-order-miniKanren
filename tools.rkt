@@ -313,7 +313,7 @@
 ;; Define explore state to maintain the data held at every step
 ;; when exploring
 ;; https://wiki.haskell.org/Zipper
-(struct explore-parent-context (index siblings choices context) #:prefab)
+(struct explore-context (index siblings choices parent) #:prefab)
 (struct explore-node (index choices expanded-choices) #:prefab)
 ;;       a
 ;;    /--|--\
@@ -341,15 +341,15 @@
 ;; tree manipulation
 (define (explore-choice exp-loc step choice)
   (match exp-loc
-    [(explore-loc (explore-node i chs xchs) context)
+    [(explore-loc (explore-node i chs xchs) parent)
      (let*-values ([(x-ind) (index-where xchs (lambda (xn) (= choice (explore-node-index xn))))]
                    [(xc hes) (if (not x-ind) (values '() xchs) (split-at xchs x-ind))]
                    [(expanded-node) (if x-ind (list-ref xchs x-ind) (expand-choice-node chs step choice))]
-                   [(expanded-context) (explore-parent-context choice (append xc hes) chs context)])
+                   [(expanded-context) (explore-context choice (append xc hes) chs parent)])
        (explore-loc expanded-node expanded-context))]))
 (define (explore-undo exp-loc)
   (match exp-loc
-    [(explore-loc tree (explore-parent-context i siblings ch ctx))
+    [(explore-loc tree (explore-context i siblings ch ctx))
      (explore-loc (explore-node i ch (cons tree siblings)) ctx)]
     [(explore-loc t 'X-TOP) (explore-loc t 'X-TOP)]))
 
