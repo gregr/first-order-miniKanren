@@ -258,7 +258,6 @@
          (for-each (lambda (v) (pp " * " v)) cxs))
        (when (null? cxs)
          (displayln (string-append margin " No constraints"))))))
-
   (let loop ((s (stream->choices s)) (undo '()))
     (define previous-choice
       (and (pair? undo)
