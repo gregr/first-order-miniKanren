@@ -419,7 +419,7 @@
         (loop
           (cond
             [(and (integer? input) (<= 1 input) (<= input (length (explore-node-choices tree))))
-            (explore-choice s step (- input 1))]
+             (explore-choice s step (- input 1))]
             [(or (eq? input 'u) (eq? input 'undo)) (explore-undo s)]
             [else s]))))))
 
