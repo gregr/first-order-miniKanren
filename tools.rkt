@@ -251,17 +251,15 @@
   (define (print-choice s)
     (match s
       ((pause st g)
-        (pp/qvars (walked-term initial-var st)) ; Print query variables
-        (define cxs (walked-term (goal->constraints st g) st))
-        (unless (null? cxs)
-          (displayln (string-append margin " Constraints:"))
-          (for-each (lambda (v) (pp " * " v)) cxs))
-        (when (null? cxs)
-          (displayln (string-append margin " No constraints"))))))
+       (pp/qvars (walked-term initial-var st))
+       (define cxs (walked-term (goal->constraints st g) st))
+       (unless (null? cxs)
+         (displayln (string-append margin " Constraints:"))
+         (for-each (lambda (v) (pp " * " v)) cxs))
+       (when (null? cxs)
+         (displayln (string-append margin " No constraints"))))))
 
-  (let loop ((s (stream->choices s))
-            (undo '()))
-    (printf "\nState: ~s\n" s)
+  (let loop ((s (stream->choices s)) (undo '()))
     (define previous-choice
       (and (pair? undo)
            (let* ((i.s (car undo)) (i (car i.s)) (s (cdr i.s)))
