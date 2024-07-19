@@ -160,7 +160,7 @@
                                                      (pause st g2))))
       ((conj g1 g2)     (parallel-step-simple (bind (pause st g1) g2)))
       ((relate thunk _) (pause st (thunk)))
-      ((== t1 t2)       (unify t1 t2 st))))
+      ((== t1 t2)       (state->stream (unify t1 t2 st)))))
   (define (parallel-expand g)
     (let loop ((g g))
       (match g
