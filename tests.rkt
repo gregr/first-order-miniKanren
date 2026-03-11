@@ -98,6 +98,7 @@
     ((_ name e-actual e-expected)
      (time (begin
              (printf "Testing ~s: " name)
+             (flush-output)
              (let ((actual e-actual) (expected e-expected))
                (if (equal? actual expected)
                  (printf "~s\n" 'success)
@@ -115,6 +116,7 @@
 (include "not-symbolo-tests.rkt")
 (include "not-symbolo-not-numbero-tests.rkt")
 (include "distype-diseq-tests.rkt")
+(include "more-tests.rkt")
 
 (display "\nRunning remaining tests")
 (newline)
@@ -149,9 +151,9 @@
       (appendo l s out)
       (== (cons l (cons s (cons out '()))) q)))
   '(((() _.0 _.0)) (((_.0) _.1 (_.0 . _.1)))
-  (((_.0 _.1) _.2 (_.0 _.1 . _.2))) 
-  (((_.0 _.1 _.2) _.3 (_.0 _.1 _.2 . _.3))) 
-  (((_.0 _.1 _.2 _.3) _.4 (_.0 _.1 _.2 _.3 . _.4)))))
+    (((_.0 _.1) _.2 (_.0 _.1 . _.2)))
+    (((_.0 _.1 _.2) _.3 (_.0 _.1 _.2 . _.3)))
+    (((_.0 _.1 _.2 _.3) _.4 (_.0 _.1 _.2 _.3 . _.4)))))
 
 (test 'sometimeso-0
   (run 5 (q) (sometimeso q))

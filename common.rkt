@@ -71,10 +71,9 @@
          (u-type (var-type-ref u types))
          (types (if u-type (var-type-remove u types) types))
          (new-sub (extend-sub u v (state-sub st))))
-    (and new-sub (let ((st (state new-sub (state-diseq st) types (state-distypes st))))
-                   (if u-type
-                       (typify u u-type st)
-                       (state-simplify st))))))
+    (and new-sub (let ((st (state-simplify
+                            (state new-sub (state-diseq st) types (state-distypes st)))))
+                   (and st (if u-type (typify u u-type st) st))))))
 
 (define (unify u v st)
   (let* ((sub (state-sub st))
